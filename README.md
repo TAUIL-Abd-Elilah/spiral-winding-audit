@@ -26,9 +26,11 @@ skipped), worst on the inner windings. This tool makes that visible per node, pe
 2. **Sheets between.** Along the straight segment from the node to its nearest point on winding k+1, the surface
    prediction (m7, uint8; binary in the published level-0 stores) is sampled every voxel and thresholded at 128.
    First each end is checked: a node that is not on any predicted sheet (`node_off_sheet`) is a finding on its own,
-   because a render at that node samples nothing but the gap. When both ends are on a sheet, the number of sheet
-   runs between them gives the verdict: 1 = both windings on the same sheet (`merged`), 2 = adjacent wraps, 3+ = a
-   wrap was skipped. This separates fit errors from prediction gaps, which the spacing check alone cannot do.
+   because a render at that node samples nothing but the gap. When both ends are on a sheet, the number of sheet runs between them gives the verdict: 2 = adjacent
+   wraps, 3+ = a wrap was skipped, 1 = one unbroken run joins them, which is `merged` (both windings on one
+   sheet, a fit error) when the neighbour is closer than half a pitch and `fused` (the prediction fills the gap
+   between two wraps, a model error in a compressed region) when it is about a pitch away. This separates fit
+   errors from prediction errors, which the spacing check alone cannot do.
 3. **Report.** `audit.csv` / `audit.json` with one row per winding pair (pitch, spacing fractions merged / skipped /
    unassessed, fraction of nodes off any sheet, and among nodes with both ends on a sheet the fractions adjacent /
    merged / skipped, plus area in cm² when `--voxel-um` is given), `summary.json` for the band, per-pair maps
