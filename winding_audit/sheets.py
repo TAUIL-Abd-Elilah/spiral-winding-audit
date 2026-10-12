@@ -19,6 +19,8 @@ from dataclasses import dataclass
 import numpy as np
 import zarr
 
+zarr.config.set({"async.concurrency": 2})   # this tool shares the machine; one chunk at a time is enough
+
 from .spacing import SpacingResult, UNASSESSED
 from .tifxyz import Winding
 
@@ -45,21 +47,31 @@ def open_surface(path: str, group: str = "0"):
     return node[group]
 
 
-def sample_volume(arr, pts_xyz: np.ndarray, batch: int = 2_000_000) -> np.ndarray:
-    """Nearest-voxel samples of ``arr`` (z, y, x) at float x, y, z coordinates; 0 outside the volume."""
+def sample_volume(arr, pts_xyz: np.ndarray) -> np.ndarray:
+    """Nearest-voxel samples of ``arr`` (z, y, x) at float x, y, z coordinates; 0 outside the volume.
+
+    Reads one chunk at a time (zarr's own coordinate selection decodes every touched chunk at once, which on a
+    192^3-chunk prediction means gigabytes), so memory stays at one decoded chunk plus the sample arrays.
+    """
     Z, Y, X = arr.shape
+    cz, cy, cx = arr.chunks
     out = np.zeros(len(pts_xyz), np.uint8)
     zi = np.rint(pts_xyz[:, 2]).astype(np.int64)
     yi = np.rint(pts_xyz[:, 1]).astype(np.int64)
     xi = np.rint(pts_xyz[:, 0]).astype(np.int64)
     ok = (zi >= 0) & (zi < Z) & (yi >= 0) & (yi < Y) & (xi >= 0) & (xi < X)
     idx = np.nonzero(ok)[0]
-    for s in range(0, len(idx), batch):
-        sel = idx[s:s + batch]
-        # sort by chunk-major order so the store reads each chunk once
-        order = np.lexsort((xi[sel], yi[sel], zi[sel]))
-        sel = sel[order]
-        out[sel] = arr.get_coordinate_selection((zi[sel], yi[sel], xi[sel]))
+    if len(idx) == 0:
+        return out
+    key = np.stack([zi[idx] // cz, yi[idx] // cy, xi[idx] // cx], 1)
+    keys, inverse = np.unique(key, axis=0, return_inverse=True)
+    order = np.argsort(inverse, kind="stable")
+    bounds = np.searchsorted(inverse[order], np.arange(len(keys) + 1))
+    for k, (kz, ky, kx) in enumerate(keys):
+        sel = idx[order[bounds[k]:bounds[k + 1]]]
+        z0, y0, x0 = kz * cz, ky * cy, kx * cx
+        block = np.asarray(arr[z0:min(z0 + cz, Z), y0:min(y0 + cy, Y), x0:min(x0 + cx, X)])
+        out[sel] = block[zi[sel] - z0, yi[sel] - y0, xi[sel] - x0]
     return out
 
 

@@ -77,6 +77,7 @@ def test_cli_audit_runs(dataset, tmp_path):
     _, _, _, paths = dataset
     out = tmp_path / "audit"
     main(["audit", paths["windings"], "--surface", paths["surface"], "--group", "0", "--out", str(out),
-          "--voxel-um", "8.64", "--sections", "12"])
+          "--voxel-um", "8.64", "--sections", "12", "--grid-figures"])
     assert (out / "audit.csv").exists() and (out / "summary.json").exists()
     assert (out / "sections" / "z000012.png").exists()
+    assert (out / "windings" / "w000_syn.png").exists()
