@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "winding-audit"
+version = "0.1.0"
+description = "Check the windings of a spiral fit against each other and the surface prediction: mergers, skipped wraps, nodes off the sheet."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+dependencies = ["numpy", "scipy", "zarr>=3", "tifffile", "matplotlib"]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.scripts]
+winding-audit = "winding_audit.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["winding_audit*"]
