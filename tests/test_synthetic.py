@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 
 from winding_audit import synthetic as syn
-from winding_audit.sheets import open_surface, sheet_counts
+from winding_audit.sheets import S_ADJACENT, S_MERGED, S_SKIPPED, S_START_OFF, open_surface, sheet_counts
 from winding_audit.spacing import MERGED, OK, SKIPPED, neighbour_spacing
 from winding_audit.tifxyz import list_windings
 
@@ -17,6 +17,7 @@ def dataset(tmp_path_factory):
     ws, thetas = syn.make_windings(n_sheets=6, pitch=PITCH, centre=centre)
     syn.inject_merge(ws, thetas, w=1, t0=1.0, t1=2.0, pitch=PITCH, centre=centre)     # w1 on sheet 2 for theta 1..2
     syn.inject_skip(ws, thetas, w=4, t0=3.5, t1=4.5, pitch=PITCH, centre=centre)      # w4, w5 shifted out: w3->w4 spans 2
+    syn.inject_gap(ws, thetas, w=2, t0=5.0, t1=5.8, pitch=PITCH, centre=centre)       # w2 half a pitch out: off any sheet
     s, d = syn.write_dataset(str(out), vol, ws)
     windings = list_windings(d)
     return open_surface(s, "0"), windings, thetas, {"surface": s, "windings": d}
@@ -44,8 +45,9 @@ def test_clean_pair_is_clean(dataset):
     assert (f == OK).mean() > 0.97
     assert (sp.flag[:, cols] == 3).mean() < 0.25  # only the band's top and bottom rows may be unassessed
     sc = sheet_counts(ws[0], sp, surface)
-    r = sc.runs[:, cols]
-    assert (r[r >= 0] == 2).mean() > 0.97
+    v = sc.verdict[:, cols]
+    v = v[v != 5]
+    assert (v == S_ADJACENT).mean() > 0.97
 
 
 def test_merger_is_flagged(dataset):
@@ -56,8 +58,8 @@ def test_merger_is_flagged(dataset):
     assert (_assessed(sp.flag[:, inside]) == MERGED).mean() > 0.9
     assert (_assessed(sp.flag[:, outside]) == MERGED).mean() < 0.02
     sc = sheet_counts(ws[1], sp, surface)
-    r_in = sc.runs[:, inside]
-    assert (r_in[r_in >= 0] == 1).mean() > 0.9
+    v_in = sc.verdict[:, inside]
+    assert (v_in[v_in != 5] == S_MERGED).mean() > 0.9
 
 
 def test_skip_is_flagged(dataset):
@@ -68,8 +70,21 @@ def test_skip_is_flagged(dataset):
     assert (_assessed(sp.flag[:, inside]) == SKIPPED).mean() > 0.9
     assert (_assessed(sp.flag[:, outside]) == SKIPPED).mean() < 0.02
     sc = sheet_counts(ws[3], sp, surface)
-    r_in = sc.runs[:, inside]
-    assert (r_in[r_in >= 0] >= 3).mean() > 0.9
+    v_in = sc.verdict[:, inside]
+    assert (v_in[v_in != 5] == S_SKIPPED).mean() > 0.9
+
+
+def test_node_off_sheet_is_reported(dataset):
+    surface, ws, thetas, _ = dataset
+    sp = neighbour_spacing(ws[2], ws[3])          # w2 sits half a pitch out for theta in [5, 5.8): not on any sheet
+    inside = _interior(thetas, 5.0, 5.8, margin=0.15)
+    outside = ~_theta_cols(thetas, 4.7, 6.1)
+    sc = sheet_counts(ws[2], sp, surface)
+    v_in = sc.verdict[:, inside]
+    assert (v_in[v_in != 5] == S_START_OFF).mean() > 0.9
+    v_out = sc.verdict[:, outside]
+    assert (v_out[v_out != 5] == S_START_OFF).mean() < 0.02
+    assert (_assessed(sp.flag[:, inside]) == OK).mean() > 0.9      # spacing alone cannot see this fault
 
 
 def test_cli_audit_runs(dataset, tmp_path):

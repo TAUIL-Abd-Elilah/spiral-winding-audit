@@ -44,14 +44,16 @@ def cmd_audit(a):
         rows.append(row)
         flags[w1.name] = sp.flag
         np.savez_compressed(npz, distance=sp.distance, flag=sp.flag, runs=(sc.runs if sc is not None else np.array([])),
+                            verdict=(sc.verdict if sc is not None else np.array([])),
                             start_on_sheet=(sc.start_on_sheet if sc is not None else np.array([])))
         json.dump(row, open(rowf, "w"))
         if a.grid_figures:
             winding_grid_figure(w1.name, sp, sc, os.path.join(a.out, "windings", f"{w1.name}.png"), w1.grid_step,
                                 a.voxel_um)
-        print(f"{w1.name:>16s} -> {w2.name:<16s} pitch {sp.pitch:5.1f} vox  merged {row['frac_merged']:.3f}  "
-              f"skipped {row['frac_skipped']:.3f}" + (f"  runs2 {row['frac_runs2']:.3f}  runs1 {row['frac_runs1']:.3f}  "
-              f"runs3+ {row['frac_runs3plus']:.3f}" if sc is not None else ""), flush=True)
+        print(f"{w1.name:>16s} -> {w2.name:<16s} pitch {sp.pitch:5.1f} vox  spacing merged {row['frac_merged']:.3f} "
+              f"skipped {row['frac_skipped']:.3f}" + (f" | off-sheet {row['frac_node_off_sheet']:.3f} | sheets: "
+              f"adjacent {row['frac_sheet_adjacent']:.3f} merged {row['frac_sheet_merged']:.3f} "
+              f"skipped {row['frac_sheet_skipped']:.3f}" if sc is not None else ""), flush=True)
     rep.write_rows(rows, a.out)
     summary = rep.summarize(rows)
     summary["seconds"] = round(time.time() - t0, 1)

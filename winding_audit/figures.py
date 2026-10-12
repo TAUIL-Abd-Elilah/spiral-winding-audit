@@ -40,13 +40,13 @@ def winding_grid_figure(name: str, sp: SpacingResult, sc: SheetCountResult | Non
     fig.colorbar(im, ax=axes[1], fraction=0.02, pad=0.01)
 
     if sc is not None:
-        r = sc.runs.astype(float)
-        r[sc.runs < 0] = np.nan
-        im = axes[2].imshow(np.clip(r, 0, 3), cmap="viridis", vmin=0, vmax=3, extent=extent, interpolation="nearest",
-                            aspect="auto")
-        axes[2].set_title("predicted sheets crossed on the way to the next winding (2 = adjacent, 1 = merged, 3 = one skipped)")
+        v = sc.verdict.astype(float)
+        v[sc.verdict == 5] = np.nan
+        vmap = ListedColormap(["#2ecc71", "#e74c3c", "#f39c12", "#8e44ad", "#d7bde2"])
+        axes[2].imshow(v, cmap=vmap, vmin=-0.5, vmax=4.5, extent=extent, interpolation="nearest", aspect="auto")
+        axes[2].set_title("surface prediction: green adjacent, red same sheet, orange a sheet skipped, "
+                          "purple node off any sheet, lilac neighbour off sheet")
         axes[2].set_ylabel(f"along axis ({unit})")
-        fig.colorbar(im, ax=axes[2], fraction=0.02, pad=0.01)
     axes[-1].set_xlabel(f"around the turn ({unit})")
     fig.tight_layout()
     os.makedirs(os.path.dirname(out_png) or ".", exist_ok=True)

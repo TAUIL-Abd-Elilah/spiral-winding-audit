@@ -2,15 +2,17 @@
 
 The physical definition of "winding k+1 is the next wrap after winding k": the straight segment from a node of k to
 the nearest point of k+1 crosses exactly two predicted sheets, the one each winding sits on, and nothing in between.
-Along that segment (extended by a small margin at both ends) the surface prediction (e.g. m7, uint8 probability) is
-sampled every voxel and thresholded; the number of runs of sheet voxels is the sheet count:
+Along that segment the surface prediction (e.g. m7, uint8, binary at threshold 128 in the published level-0 stores)
+is sampled every voxel and thresholded. First each endpoint is checked (within +-1 voxel): a node that is not on any
+predicted sheet is a finding on its own (`node_off_sheet`: the snap left it in a gap, or there is no prediction there;
+a render at that node samples nothing). When both ends are on a sheet, the runs of sheet voxels from the node to the
+neighbour decide the verdict:
 
+    1 run   -> both windings on one sheet (merged)
     2 runs  -> adjacent wraps (ok)
-    1 run   -> both windings on one sheet, or the segment never leaves one sheet (merged)
     3+ runs -> at least one wrap between them was skipped
-    0 runs  -> neither end is on a predicted sheet (no surface here; unassessed)
 
-Whether each endpoint itself lies on a sheet is reported separately (the snap may have left nodes in the gap).
+`runs` keeps the raw count over the whole segment (with a margin at both ends) for inspection.
 """
 from __future__ import annotations
 
@@ -25,18 +27,26 @@ from .spacing import SpacingResult, UNASSESSED
 from .tifxyz import Winding
 
 
+S_ADJACENT, S_MERGED, S_SKIPPED, S_START_OFF, S_END_OFF, S_UNASSESSED = 0, 1, 2, 3, 4, 5
+SHEET_VERDICT_NAMES = {S_ADJACENT: "adjacent", S_MERGED: "merged", S_SKIPPED: "skipped",
+                       S_START_OFF: "node_off_sheet", S_END_OFF: "neighbour_off_sheet", S_UNASSESSED: "unassessed"}
+
+
 @dataclass
 class SheetCountResult:
     runs: np.ndarray            # (H, W) int8 number of sheet runs along the segment, -1 where not assessed
-    start_on_sheet: np.ndarray  # (H, W) bool: the node of A is on a predicted sheet
+    start_on_sheet: np.ndarray  # (H, W) bool: the node of A is on a predicted sheet (within +-1 voxel)
     end_on_sheet: np.ndarray    # (H, W) bool: the nearest point on B is on a predicted sheet
+    verdict: np.ndarray         # (H, W) int8 S_* : the sheet-based reading of the pair at this node
 
     def histogram(self) -> dict[str, int]:
-        r = self.runs[self.runs >= 0]
-        return {"n": int(r.size), "runs0": int((r == 0).sum()), "runs1": int((r == 1).sum()),
-                "runs2": int((r == 2).sum()), "runs3plus": int((r >= 3).sum()),
-                "start_on_sheet": int(self.start_on_sheet[self.runs >= 0].sum()),
-                "end_on_sheet": int(self.end_on_sheet[self.runs >= 0].sum())}
+        v = self.verdict
+        assessed = v != S_UNASSESSED
+        both = assessed & (v != S_START_OFF) & (v != S_END_OFF)
+        return {"n": int(assessed.sum()), "node_off_sheet": int((v == S_START_OFF).sum()),
+                "neighbour_off_sheet": int((v == S_END_OFF).sum()), "both_on_sheet": int(both.sum()),
+                "adjacent": int((v == S_ADJACENT).sum()), "merged": int((v == S_MERGED).sum()),
+                "skipped": int((v == S_SKIPPED).sum())}
 
 
 def open_surface(path: str, group: str = "0"):
@@ -89,10 +99,11 @@ def sheet_counts(a: Winding, spacing: SpacingResult, surface, threshold: int = 1
     runs = np.full((H, W), -1, np.int8)
     start_on = np.zeros((H, W), bool)
     end_on = np.zeros((H, W), bool)
+    verdict = np.full((H, W), S_UNASSESSED, np.int8)
     assess = (spacing.flag != UNASSESSED) & np.isfinite(spacing.distance)
     rc = np.stack(np.nonzero(assess), -1)
     if len(rc) == 0:
-        return SheetCountResult(runs, start_on, end_on)
+        return SheetCountResult(runs, start_on, end_on, verdict)
     p = a.xyz[rc[:, 0], rc[:, 1]]
     q = spacing.nearest[rc[:, 0], rc[:, 1]]
     d = spacing.distance[rc[:, 0], rc[:, 1]]
@@ -108,7 +119,24 @@ def sheet_counts(a: Winding, spacing: SpacingResult, surface, threshold: int = 1
     r = count_runs(sheet).astype(np.int8)
     runs[rc[:, 0], rc[:, 1]] = r
     k0 = int(round(margin / step))
-    start_on[rc[:, 0], rc[:, 1]] = sheet[:, k0]
     kend = np.clip(np.rint((L + margin) / step).astype(int), 0, n - 1)
-    end_on[rc[:, 0], rc[:, 1]] = sheet[np.arange(len(rc)), kend]
-    return SheetCountResult(runs, start_on, end_on)
+    rows_i = np.arange(len(rc))
+    s_on = sheet[:, max(k0 - 1, 0):k0 + 2].any(1)
+    e_on = np.stack([sheet[rows_i, np.clip(kend + o, 0, n - 1)] for o in (-1, 0, 1)], 1).any(1)
+    start_on[rc[:, 0], rc[:, 1]] = s_on
+    end_on[rc[:, 0], rc[:, 1]] = e_on
+    # both endpoints on a sheet: is it the same run (merged), the next one (adjacent) or further (skipped)?
+    between = sheet.copy()
+    between[:, :k0] = False
+    for i in range(len(rc)):            # cut everything beyond the endpoint, keeping the endpoint sample itself
+        between[i, kend[i] + 1:] = False
+    r_between = count_runs(between)
+    v = np.full(len(rc), S_UNASSESSED, np.int8)
+    v[~s_on] = S_START_OFF
+    v[s_on & ~e_on] = S_END_OFF
+    both = s_on & e_on
+    v[both & (r_between <= 1)] = S_MERGED
+    v[both & (r_between == 2)] = S_ADJACENT
+    v[both & (r_between >= 3)] = S_SKIPPED
+    verdict[rc[:, 0], rc[:, 1]] = v
+    return SheetCountResult(runs, start_on, end_on, verdict)

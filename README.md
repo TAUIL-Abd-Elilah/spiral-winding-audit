@@ -23,15 +23,19 @@ skipped), worst on the inner windings. This tool makes that visible per node, pe
    sheet pitch is the pair's median spacing. `merged` = closer than 0.3 × pitch; `skipped` = farther than 1.7 × pitch.
    Nodes whose nearest neighbour point is on the neighbour's own boundary are `unassessed` (the true nearest point
    is outside the neighbour's coverage).
-2. **Sheet count.** Along the straight segment from the node to its nearest point on winding k+1, the surface
-   prediction (m7 probability, uint8) is sampled every voxel and thresholded at 128. The number of runs of sheet
-   voxels is the sheet count: 2 = adjacent wraps, 1 = merged, 3+ = a wrap skipped, 0 = no surface here. Whether each
-   end sits on a sheet is reported separately (the snap can leave nodes in the gap).
-3. **Report.** `audit.csv` / `audit.json` with one row per winding pair (pitch, fractions merged / skipped /
-   unassessed, sheet-count histogram, nodes on sheet, area in cm² when `--voxel-um` is given), `summary.json` for the
-   band, per-pair maps (`maps/<winding>.npz`: distance, flag, runs on the winding grid), and cross-section PNGs at the
-   requested z (all windings over the prediction slice, coloured green ok / red merged / orange skipped / grey
-   unassessed).
+2. **Sheets between.** Along the straight segment from the node to its nearest point on winding k+1, the surface
+   prediction (m7, uint8; binary in the published level-0 stores) is sampled every voxel and thresholded at 128.
+   First each end is checked: a node that is not on any predicted sheet (`node_off_sheet`) is a finding on its own,
+   because a render at that node samples nothing but the gap. When both ends are on a sheet, the number of sheet
+   runs between them gives the verdict: 1 = both windings on the same sheet (`merged`), 2 = adjacent wraps, 3+ = a
+   wrap was skipped. This separates fit errors from prediction gaps, which the spacing check alone cannot do.
+3. **Report.** `audit.csv` / `audit.json` with one row per winding pair (pitch, spacing fractions merged / skipped /
+   unassessed, fraction of nodes off any sheet, and among nodes with both ends on a sheet the fractions adjacent /
+   merged / skipped, plus area in cm² when `--voxel-um` is given), `summary.json` for the band, per-pair maps
+   (`maps/<winding>.npz`: distance, flag, verdict, runs on the winding grid), `--grid-figures` (one PNG per winding
+   with the three maps) and `--sections` cross-section PNGs at the requested z (all windings over the prediction
+   slice, coloured green ok / red merged / orange skipped / grey unassessed). The audit is resumable: pairs already
+   written are skipped on a re-run.
 
 ## Use
 

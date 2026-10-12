@@ -17,10 +17,12 @@ def pair_row(a: Winding, b: Winding, sp: SpacingResult, sc: SheetCountResult | N
     if sc is not None:
         h = sc.histogram()
         row.update({f"sheet_{k}": v for k, v in h.items()})
-        row["frac_runs2"] = h["runs2"] / max(h["n"], 1)
-        row["frac_runs1"] = h["runs1"] / max(h["n"], 1)
-        row["frac_runs3plus"] = h["runs3plus"] / max(h["n"], 1)
-        row["frac_start_on_sheet"] = h["start_on_sheet"] / max(h["n"], 1)
+        n, both = max(h["n"], 1), max(h["both_on_sheet"], 1)
+        row["frac_node_off_sheet"] = h["node_off_sheet"] / n            # of this winding's assessed nodes
+        row["frac_neighbour_off_sheet"] = h["neighbour_off_sheet"] / n
+        row["frac_sheet_adjacent"] = h["adjacent"] / both                # of nodes with both ends on a sheet
+        row["frac_sheet_merged"] = h["merged"] / both
+        row["frac_sheet_skipped"] = h["skipped"] / both
     step = a.grid_step
     row["area_cm2"] = float(a.valid.sum()) * step * step * ((voxel_um or 1.0) * 1e-4) ** 2 if voxel_um else None
     row["pitch_um"] = sp.pitch * voxel_um if voxel_um else None
@@ -45,9 +47,13 @@ def summarize(rows: list[dict]) -> dict:
     wsum = lambda k: sum(r[k] * r["n_assessed"] for r in rows if r.get(k) is not None) / max(n, 1)
     out = {"pairs": len(rows), "nodes_assessed": n, "frac_merged": wsum("frac_merged"),
            "frac_skipped": wsum("frac_skipped")}
-    if "frac_runs2" in rows[0]:
-        out.update({"frac_runs2": wsum("frac_runs2"), "frac_runs1": wsum("frac_runs1"),
-                    "frac_runs3plus": wsum("frac_runs3plus"), "frac_start_on_sheet": wsum("frac_start_on_sheet")})
+    if "frac_sheet_adjacent" in rows[0]:
+        nb = sum(r["sheet_both_on_sheet"] for r in rows)
+        bsum = lambda k: sum(r[k] * r["sheet_both_on_sheet"] for r in rows) / max(nb, 1)
+        out.update({"frac_node_off_sheet": wsum("frac_node_off_sheet"),
+                    "frac_neighbour_off_sheet": wsum("frac_neighbour_off_sheet"),
+                    "nodes_both_on_sheet": nb, "frac_sheet_adjacent": bsum("frac_sheet_adjacent"),
+                    "frac_sheet_merged": bsum("frac_sheet_merged"), "frac_sheet_skipped": bsum("frac_sheet_skipped")})
     if rows[0].get("area_cm2") is not None:
         out["area_cm2"] = sum(r["area_cm2"] for r in rows)
     return out
