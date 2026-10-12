@@ -61,14 +61,23 @@ def summarize(rows: list[dict]) -> dict:
     return out
 
 
+SPACING_COLORS = {OK: "#2ecc71", MERGED: "#e74c3c", SKIPPED: "#f39c12", UNASSESSED: "#7f8c8d"}
+# sheet verdicts: adjacent, merged, skipped, node off sheet, neighbour off sheet, unassessed, fused
+VERDICT_COLORS = {0: "#2ecc71", 1: "#e74c3c", 2: "#f39c12", 3: "#8e44ad", 4: "#d7bde2", 5: "#7f8c8d", 6: "#3498db"}
+
+
 def cross_section(windings: list[Winding], flags: dict[str, np.ndarray], z0: float, out_png: str,
-                  surface=None, half_z: float | None = None, title: str = ""):
-    """All windings' nodes within half_z of z0 over the surface-prediction slice, coloured by flag."""
+                  surface=None, half_z: float | None = None, title: str = "", by_verdict: bool = False):
+    """All windings' nodes within half_z of z0 over the surface-prediction slice, coloured by spacing flag or, with
+    ``by_verdict`` (``flags`` then holds verdict maps), by the sheet verdict."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    colors = {OK: "#2ecc71", MERGED: "#e74c3c", SKIPPED: "#f39c12", UNASSESSED: "#7f8c8d"}
+    colors = VERDICT_COLORS if by_verdict else SPACING_COLORS
+    legend = ("green adjacent, red same sheet, blue gap filled by the prediction, orange skipped, "
+              "purple node off any sheet, lilac neighbour off sheet, grey unassessed" if by_verdict else
+              "green ok, red merged, orange skipped, grey unassessed")
     fig, ax = plt.subplots(figsize=(9, 9), dpi=110)
     sel = []
     for w in windings:
@@ -93,7 +102,7 @@ def cross_section(windings: list[Winding], flags: dict[str, np.ndarray], z0: flo
         f = flags.get(w.name)
         c = [colors[int(k)] for k in (f[v] if f is not None else np.full(v.sum(), UNASSESSED))]
         ax.scatter(w.xyz[v, 0], w.xyz[v, 1], s=3, c=c, linewidths=0)
-    ax.set_title(f"{title} z={z0:.0f}: green ok, red merged, orange skipped, grey unassessed")
+    ax.set_title(f"{title} z={z0:.0f}: {legend}", fontsize=8)
     ax.set_xlabel("x (voxels)")
     ax.set_ylabel("y (voxels)")
     ax.set_aspect("equal")

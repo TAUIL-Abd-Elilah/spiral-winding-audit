@@ -28,7 +28,7 @@ def cmd_audit(a):
     if len(ws) < 2:
         sys.exit(f"need at least two windings in {a.windings}, found {len(ws)}")
     surface = None if a.no_sheets else open_surface(a.surface, a.group)
-    rows, flags = [], {}
+    rows, flags, verdicts = [], {}, {}
     maps_dir, rows_dir = _ensure(a.out, "maps"), _ensure(a.out, "rows")
     for w1, w2 in zip(ws[:-1], ws[1:]):
         if w2.index is not None and w1.index is not None and w2.index != w1.index + 1:
@@ -36,13 +36,18 @@ def cmd_audit(a):
         npz, rowf = os.path.join(maps_dir, f"{w1.name}.npz"), os.path.join(rows_dir, f"{w1.name}.json")
         if os.path.exists(npz) and os.path.exists(rowf):          # resume: this pair was finished earlier
             rows.append(json.load(open(rowf)))
-            flags[w1.name] = np.load(npz)["flag"]
+            m = np.load(npz)
+            flags[w1.name] = m["flag"]
+            if m["verdict"].size:
+                verdicts[w1.name] = m["verdict"]
             continue
         sp = neighbour_spacing(w1, w2, a.merge_frac, a.skip_frac)
         sc = _retry(lambda: sheet_counts(w1, sp, surface, a.threshold)) if surface is not None else None
         row = rep.pair_row(w1, w2, sp, sc, a.voxel_um)
         rows.append(row)
         flags[w1.name] = sp.flag
+        if sc is not None:
+            verdicts[w1.name] = sc.verdict
         np.savez_compressed(npz, distance=sp.distance, flag=sp.flag, runs=(sc.runs if sc is not None else np.array([])),
                             verdict=(sc.verdict if sc is not None else np.array([])),
                             start_on_sheet=(sc.start_on_sheet if sc is not None else np.array([])))
@@ -61,10 +66,15 @@ def cmd_audit(a):
     json.dump(summary, open(os.path.join(a.out, "summary.json"), "w"), indent=1)
     print("summary:", json.dumps(summary))
     if a.sections:
+        name = os.path.basename(os.path.normpath(a.windings))
         for z in a.sections:
-            png = rep.cross_section(ws, flags, z, os.path.join(a.out, "sections", f"z{int(z):06d}.png"), surface,
-                                    title=os.path.basename(os.path.normpath(a.windings)))
+            png = rep.cross_section(ws, flags, z, os.path.join(a.out, "sections", f"z{int(z):06d}_spacing.png"),
+                                    surface, title=name)
             print("wrote", png)
+            if verdicts:
+                png = rep.cross_section(ws, verdicts, z, os.path.join(a.out, "sections", f"z{int(z):06d}_sheets.png"),
+                                        surface, title=name, by_verdict=True)
+                print("wrote", png)
 
 
 def _ensure(*parts):
