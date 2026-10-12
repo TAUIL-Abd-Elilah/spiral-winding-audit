@@ -18,6 +18,7 @@ def dataset(tmp_path_factory):
     syn.inject_merge(ws, thetas, w=1, t0=1.0, t1=2.0, pitch=PITCH, centre=centre)     # w1 on sheet 2 for theta 1..2
     syn.inject_skip(ws, thetas, w=4, t0=3.5, t1=4.5, pitch=PITCH, centre=centre)      # w4, w5 shifted out: w3->w4 spans 2
     syn.inject_gap(ws, thetas, w=2, t0=5.0, t1=5.8, pitch=PITCH, centre=centre)       # w2 half a pitch out: off any sheet
+    syn.inject_offset(ws, thetas, w=1, t0=4.0, t1=4.8, pitch=PITCH, centre=centre)    # w1 1.5 vox out: at its sheet's edge
     s, d = syn.write_dataset(str(out), vol, ws)
     windings = list_windings(d)
     return open_surface(s, "0"), windings, thetas, {"surface": s, "windings": d}
@@ -72,6 +73,18 @@ def test_skip_is_flagged(dataset):
     sc = sheet_counts(ws[3], sp, surface)
     v_in = sc.verdict[:, inside]
     assert (v_in[v_in != 5] == S_SKIPPED).mean() > 0.9
+
+
+def test_neighbour_at_sheet_edge_is_still_adjacent(dataset):
+    """w1 sits at the edge of its sheet for theta in [4, 4.8): the run may start one voxel past the node, which must
+    not turn w0 -> w1 into 'merged' (the bug this test guards)."""
+    surface, ws, thetas, _ = dataset
+    sp = neighbour_spacing(ws[0], ws[1])
+    inside = _interior(thetas, 4.0, 4.8, margin=0.15)
+    sc = sheet_counts(ws[0], sp, surface)
+    v_in = sc.verdict[:, inside]
+    v_in = v_in[v_in != 5]
+    assert (v_in == S_ADJACENT).mean() > 0.9, np.bincount(v_in, minlength=6)
 
 
 def test_node_off_sheet_is_reported(dataset):

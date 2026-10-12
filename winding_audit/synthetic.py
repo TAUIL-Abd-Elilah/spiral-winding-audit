@@ -78,6 +78,11 @@ def inject_gap(windings, thetas, w, t0, t1, pitch, centre):
     windings[w] = _shift(windings[w], thetas, t0, t1, +0.5, pitch, centre)
 
 
+def inject_offset(windings, thetas, w, t0, t1, pitch, centre, d_pitch=0.15):
+    """Nodes slightly off the sheet centre (still within the +-1 voxel tolerance of the sheet edge)."""
+    windings[w] = _shift(windings[w], thetas, t0, t1, d_pitch, pitch, centre)
+
+
 def write_dataset(out_dir, vol, windings, grid_step=2.0, tag="syn"):
     """Write <out_dir>/surface.zarr (group '0') and <out_dir>/windings/w<NNN>_<tag>/ tifxyz folders."""
     os.makedirs(out_dir, exist_ok=True)

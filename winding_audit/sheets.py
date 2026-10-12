@@ -126,10 +126,12 @@ def sheet_counts(a: Winding, spacing: SpacingResult, surface, threshold: int = 1
     start_on[rc[:, 0], rc[:, 1]] = s_on
     end_on[rc[:, 0], rc[:, 1]] = e_on
     # both endpoints on a sheet: is it the same run (merged), the next one (adjacent) or further (skipped)?
+    # The window keeps the same +-1 voxel tolerance as the endpoint test, or a run that starts one voxel past the
+    # neighbour node would be dropped and an adjacent pair read as merged.
     between = sheet.copy()
-    between[:, :k0] = False
-    for i in range(len(rc)):            # cut everything beyond the endpoint, keeping the endpoint sample itself
-        between[i, kend[i] + 1:] = False
+    between[:, :max(k0 - 1, 0)] = False
+    for i in range(len(rc)):
+        between[i, kend[i] + 2:] = False
     r_between = count_runs(between)
     v = np.full(len(rc), S_UNASSESSED, np.int8)
     v[~s_on] = S_START_OFF

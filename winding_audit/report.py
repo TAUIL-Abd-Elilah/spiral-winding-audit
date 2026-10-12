@@ -68,15 +68,26 @@ def cross_section(windings: list[Winding], flags: dict[str, np.ndarray], z0: flo
 
     colors = {OK: "#2ecc71", MERGED: "#e74c3c", SKIPPED: "#f39c12", UNASSESSED: "#7f8c8d"}
     fig, ax = plt.subplots(figsize=(9, 9), dpi=110)
-    if surface is not None:
-        zi = int(round(z0))
-        if 0 <= zi < surface.shape[0]:
-            ax.imshow(np.asarray(surface[zi]), cmap="gray", vmin=0, vmax=255, interpolation="nearest")
+    sel = []
     for w in windings:
         hz = half_z if half_z is not None else w.grid_step / 2
         v = w.valid & (np.abs(w.xyz[..., 2] - z0) <= hz)
-        if not v.any():
-            continue
+        if v.any():
+            sel.append((w, v))
+    if surface is not None and sel:
+        # read only the windings' bounding box of this slice (a full slice of a 192^3-chunked store is thousands of
+        # chunks), subsampled for display
+        zi = int(round(z0))
+        if 0 <= zi < surface.shape[0]:
+            pts = np.concatenate([w.xyz[v][:, :2] for w, v in sel])
+            x0, y0 = np.maximum(np.floor(pts.min(0)).astype(int) - 64, 0)
+            x1 = min(int(np.ceil(pts[:, 0].max())) + 64, surface.shape[2])
+            y1 = min(int(np.ceil(pts[:, 1].max())) + 64, surface.shape[1])
+            step = max(1, int(np.ceil(max(x1 - x0, y1 - y0) / 2000)))
+            img = np.asarray(surface[zi, y0:y1, x0:x1])[::step, ::step]
+            ax.imshow(img, cmap="gray", vmin=0, vmax=255, interpolation="nearest",
+                      extent=[x0, x0 + img.shape[1] * step, y0 + img.shape[0] * step, y0])
+    for w, v in sel:
         f = flags.get(w.name)
         c = [colors[int(k)] for k in (f[v] if f is not None else np.full(v.sum(), UNASSESSED))]
         ax.scatter(w.xyz[v, 0], w.xyz[v, 1], s=3, c=c, linewidths=0)
