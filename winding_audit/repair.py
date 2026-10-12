@@ -9,11 +9,13 @@ k+1, and the sheet runs are listed:
     the node's own run      the run within ``node_tol`` voxels of the node
     the neighbours' runs    the runs at the positions of the nearest points of k-1 and k+1 on that line
 
-A node whose own run is not a neighbour's run is kept as it is. A node that is off any sheet, or whose run is a
-neighbour's run (merged, or fused by the prediction), is moved to the centre of the run nearest to it that lies
-strictly between the two neighbours' runs, if that run is within ``max_shift_frac`` pitches. If there is none (the
-neighbour, not this node, is on the wrong sheet; or the prediction fills the whole gap), the node is left where it
-is and reported as unrepaired. A move that disagrees with its neighbourhood (a single node jumping more than
+A node whose own run is not a neighbour's run is kept as it is. A node whose run is also the run of a neighbour
+that is about a pitch away (half a pitch or more) is kept too, as ``kept_shared_run``: the prediction does not
+separate the two wraps there, so it cannot say which node is wrong, if any. A node that is off any sheet, or whose
+run is a neighbour's run with the neighbour closer than half a pitch (merged), is moved to the centre of the run
+nearest to it that lies strictly between the two neighbours' runs, if that run is within ``max_shift_frac``
+pitches. If there is none (the neighbour, not this node, is on the wrong sheet; or there is no free sheet between
+the neighbours), the node is left where it is and reported as unrepaired. A move that disagrees with its neighbourhood (a single node jumping more than
 ``jump_frac`` pitches while the nodes around it do not) is undone, so the repair cannot pull spikes out of the mesh.
 
 Windings are repaired from the inside out, each against its already-repaired inner neighbour, so two windings on
@@ -32,9 +34,9 @@ from .sheets import sample_volume
 from .spacing import neighbour_spacing
 from .tifxyz import Winding
 
-R_KEPT, R_MOVED, R_UNREPAIRED, R_REJECTED, R_NOT_ASSESSED = 0, 1, 2, 3, 4
-REPAIR_STATUS_NAMES = {R_KEPT: "kept", R_MOVED: "moved", R_UNREPAIRED: "unrepaired", R_REJECTED: "move_rejected",
-                       R_NOT_ASSESSED: "not_assessed"}
+R_KEPT, R_MOVED, R_UNREPAIRED, R_REJECTED, R_NOT_ASSESSED, R_SHARED = 0, 1, 2, 3, 4, 5
+REPAIR_STATUS_NAMES = {R_KEPT: "kept", R_MOVED: "moved", R_SHARED: "kept_shared_run", R_UNREPAIRED: "unrepaired",
+                       R_REJECTED: "move_rejected", R_NOT_ASSESSED: "not_assessed"}
 
 
 @dataclass
@@ -143,10 +145,16 @@ def repair_winding(a: Winding, prev: Winding, nxt: Winding, surface, threshold: 
     r_prev = _run_id_at(runid, idx(s_prev), w)
     r_next = _run_id_at(runid, idx(s_next), w)
     kept = (own > 0) & (own != r_prev) & (own != r_next)
+    # on a run shared with a neighbour about a pitch away: the prediction joins two wraps (fused); not a placement
+    # this repair can judge, so the node is kept
+    half = 0.5 * pitch
+    shared_far = ((own > 0) & ~kept & ~((own == r_prev) & (np.abs(s_prev) < half))
+                  & ~((own == r_next) & (np.abs(s_next) < half)))
     st = np.full(len(p), R_KEPT, np.int8)
+    st[shared_far] = R_SHARED
     sh = np.zeros(len(p))
     max_shift = max_shift_frac * pitch
-    for i in np.nonzero(~kept)[0]:
+    for i in np.nonzero(~kept & ~shared_far)[0]:
         ids = runid[i]
         if ids.max() == 0:
             st[i] = R_UNREPAIRED

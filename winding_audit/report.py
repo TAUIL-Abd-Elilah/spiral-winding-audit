@@ -12,8 +12,12 @@ from .spacing import MERGED, OK, SKIPPED, SpacingResult, UNASSESSED
 from .tifxyz import Winding
 
 
+COLLAPSED, STRETCHED = 0.75, 1.25    # pair pitch / local pitch outside these: the pair is collapsed or stretched
+
+
 def pair_row(a: Winding, b: Winding, sp: SpacingResult, sc: SheetCountResult | None, voxel_um: float | None) -> dict:
     row = {"winding": a.name, "next": b.name, "n_nodes": int(a.valid.sum()), **sp.fractions()}
+    row["pitch_vox"] = sp.pitch
     if sc is not None:
         h = sc.histogram()
         row.update({f"sheet_{k}": v for k, v in h.items()})
@@ -32,6 +36,24 @@ def pair_row(a: Winding, b: Winding, sp: SpacingResult, sc: SheetCountResult | N
     row["area_cm2"] = float(a.valid.sum()) * step * step * ((voxel_um or 1.0) * 1e-4) ** 2 if voxel_um else None
     row["pitch_um"] = sp.pitch * voxel_um if voxel_um else None
     return row
+
+
+def add_local_pitch(rows: list[dict], voxel_um: float | None = None, half_window: int = 3):
+    """Local pitch = the mean pair pitch over +-half_window neighbouring pairs (the band's radial span per winding
+    there). A pair whose two windings sit on one sheet has a small median spacing of its own and hides from its own
+    pitch; against the local pitch it shows (ratio well below 1, its neighbour pair above 1)."""
+    def pv(r):
+        if r.get("pitch_vox") is not None:
+            return r["pitch_vox"]
+        return r["pitch_um"] / voxel_um if r.get("pitch_um") is not None and voxel_um else np.nan
+    p = np.array([pv(r) for r in rows], float)
+    for i, r in enumerate(rows):
+        w = p[max(0, i - half_window):i + half_window + 1]
+        local = float(np.nanmean(w)) if np.isfinite(w).any() else None
+        r["pitch_vox"] = None if not np.isfinite(p[i]) else float(p[i])
+        r["local_pitch_vox"] = local
+        r["pitch_ratio"] = float(p[i] / local) if local and np.isfinite(p[i]) else None
+    return rows
 
 
 def write_rows(rows: list[dict], out_dir: str):
@@ -63,6 +85,13 @@ def summarize(rows: list[dict]) -> dict:
                     "frac_sheet_skipped": bsum("frac_sheet_skipped")})
     if rows[0].get("area_cm2") is not None:
         out["area_cm2"] = sum(r["area_cm2"] for r in rows)
+    ratio = [r for r in rows if r.get("pitch_ratio") is not None]
+    if ratio:
+        col = [r for r in ratio if r["pitch_ratio"] < COLLAPSED]
+        out["pairs_collapsed"] = len(col)          # the two windings much closer than the local pitch
+        out["pairs_stretched"] = sum(r["pitch_ratio"] > STRETCHED for r in ratio)
+        if rows[0].get("area_cm2") is not None:
+            out["area_cm2_collapsed"] = sum(r["area_cm2"] for r in col)
     return out
 
 

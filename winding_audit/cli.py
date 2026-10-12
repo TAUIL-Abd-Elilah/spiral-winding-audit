@@ -65,6 +65,7 @@ def cmd_audit(a):
               f"adjacent {row['frac_sheet_adjacent']:.3f} merged {row['frac_sheet_merged']:.3f} "
               f"fused {row['frac_sheet_fused']:.3f} skipped {row['frac_sheet_skipped']:.3f}" if sc is not None else ""),
               flush=True)
+    rep.add_local_pitch(rows, a.voxel_um)
     rep.write_rows(rows, a.out)
     summary = rep.summarize(rows)
     summary["seconds"] = round(time.time() - t0, 1)

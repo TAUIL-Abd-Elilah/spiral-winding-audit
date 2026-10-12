@@ -147,3 +147,22 @@ def test_cli_audit_runs(dataset, tmp_path):
     assert (out / "sections" / "z000012_spacing.png").exists()
     assert (out / "sections" / "z000012_sheets.png").exists()
     assert (out / "windings" / "w000_syn.png").exists()
+
+
+def test_collapsed_pair_is_reported(tmp_path):
+    """Winding 2 moved 0.6 pitch inward all the way round: w1 -> w2 is 0.4 pitch apart everywhere, so its own median
+    spacing hides the fault; against the local pitch (mean pair pitch of the neighbourhood) it shows."""
+    import json
+    from winding_audit.cli import main
+    vol, centre = syn.make_volume(n_sheets=6, pitch=PITCH)
+    ws, thetas = syn.make_windings(n_sheets=6, pitch=PITCH, centre=centre)
+    ws[2] = syn._shift(ws[2], thetas, 0.0, 7.0, -0.6, PITCH, centre)
+    s, d = syn.write_dataset(str(tmp_path / "data"), vol, ws)
+    out = tmp_path / "audit"
+    main(["audit", d, "--surface", s, "--out", str(out)])
+    rows = {r["winding"]: r for r in json.load(open(out / "audit.json"))}
+    assert rows["w001_syn"]["pitch_ratio"] < 0.6          # w1 -> w2: 4 voxels against a local pitch of 10
+    assert rows["w002_syn"]["pitch_ratio"] > 1.4          # w2 -> w3: 16 voxels
+    assert all(0.75 < rows[f"w00{k}_syn"]["pitch_ratio"] < 1.25 for k in (0, 3, 4))
+    summary = json.load(open(out / "summary.json"))
+    assert summary["pairs_collapsed"] == 1 and summary["pairs_stretched"] == 1

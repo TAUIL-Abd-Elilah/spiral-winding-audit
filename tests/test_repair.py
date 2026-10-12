@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from winding_audit import synthetic as syn
-from winding_audit.repair import R_KEPT, R_MOVED, R_NOT_ASSESSED, repair_band
+from winding_audit.repair import R_KEPT, R_MOVED, R_NOT_ASSESSED, R_SHARED, repair_band
 from winding_audit.sheets import S_ADJACENT, S_MERGED, S_START_OFF, open_surface, sheet_counts
 from winding_audit.spacing import neighbour_spacing
 from winding_audit.tifxyz import list_windings
@@ -81,6 +81,8 @@ def test_fused_and_skipped_regions_are_left_alone(repaired):
         c = _cols(thetas, t0, t1)
         assert (r.status[:, c] == R_MOVED).mean() < 0.05
         assert np.allclose(r.winding.xyz[:, c], ws[4].xyz[:, c])
+    # the fused region: w4 shares its run with w5 one pitch away -> kept, labelled as a shared run
+    assert (_assessed(r.status[:, _cols(thetas, 0.3, 1.3)]) == R_SHARED).mean() > 0.9
     assert res[0] is None and res[-1] is None                  # edge windings have one neighbour: not repaired
 
 
