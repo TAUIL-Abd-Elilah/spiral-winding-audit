@@ -1,8 +1,8 @@
 """winding-audit: check the windings of a spiral fit against each other and the surface prediction.
 
   winding-audit audit <windings dir> --surface <prediction zarr> [--group 0] --out <dir> [--voxel-um 8.64]
-                      [--merge-frac 0.3] [--skip-frac 1.7] [--threshold 128] [--sections z1 z2 ..] [--no-sheets]
-                      [--grid-figures]
+                      [--merge-frac 0.3] [--skip-frac 1.7] [--threshold 128] [--node-tol 2.0] [--radius 4.0]
+                      [--subdir tifxyz/flatten.tifxyz] [--sections z1 z2 ..] [--no-sheets] [--grid-figures]
   winding-audit synthetic <out dir> [--merge W T0 T1] [--skip W T0 T1] [--gap W T0 T1]
 """
 from __future__ import annotations
@@ -24,7 +24,7 @@ from .tifxyz import list_windings
 
 def cmd_audit(a):
     t0 = time.time()
-    ws = list_windings(a.windings)
+    ws = list_windings(a.windings, subdir=a.subdir)
     if len(ws) < 2:
         sys.exit(f"need at least two windings in {a.windings}, found {len(ws)}")
     surface = None if a.no_sheets else open_surface(a.surface, a.group)
@@ -42,7 +42,8 @@ def cmd_audit(a):
                 verdicts[w1.name] = m["verdict"]
             continue
         sp = neighbour_spacing(w1, w2, a.merge_frac, a.skip_frac)
-        sc = _retry(lambda: sheet_counts(w1, sp, surface, a.threshold)) if surface is not None else None
+        sc = (_retry(lambda: sheet_counts(w1, sp, surface, a.threshold, node_tol=a.node_tol, radius=a.radius))
+              if surface is not None else None)
         row = rep.pair_row(w1, w2, sp, sc, a.voxel_um)
         rows.append(row)
         flags[w1.name] = sp.flag
@@ -50,7 +51,9 @@ def cmd_audit(a):
             verdicts[w1.name] = sc.verdict
         np.savez_compressed(npz, distance=sp.distance, flag=sp.flag, runs=(sc.runs if sc is not None else np.array([])),
                             verdict=(sc.verdict if sc is not None else np.array([])),
-                            start_on_sheet=(sc.start_on_sheet if sc is not None else np.array([])))
+                            start_on_sheet=(sc.start_on_sheet if sc is not None else np.array([])),
+                            node_dist=(sc.node_dist if sc is not None else np.array([])),
+                            neighbour_dist=(sc.neighbour_dist if sc is not None else np.array([])))
         json.dump(row, open(rowf, "w"))
         if a.grid_figures:
             winding_grid_figure(w1.name, sp, sc, os.path.join(a.out, "windings", f"{w1.name}.png"), w1.grid_step,
@@ -118,6 +121,11 @@ def main(argv=None):
     p.add_argument("--out", required=True); p.add_argument("--voxel-um", type=float)
     p.add_argument("--merge-frac", type=float, default=0.3); p.add_argument("--skip-frac", type=float, default=1.7)
     p.add_argument("--threshold", type=int, default=128); p.add_argument("--sections", type=float, nargs="*")
+    p.add_argument("--subdir", default="",
+                   help="tifxyz path inside each winding folder, e.g. tifxyz/flatten.tifxyz for flatten output")
+    p.add_argument("--node-tol", type=float, default=2.0,
+                   help="a node is on a sheet when a predicted-sheet voxel lies within this distance (voxels)")
+    p.add_argument("--radius", type=float, default=4.0, help="node-to-sheet distance is exact up to this (voxels)")
     p.add_argument("--no-sheets", action="store_true", help="spacing only (no surface prediction)")
     p.add_argument("--grid-figures", action="store_true", help="one PNG per winding: flag, distance and sheet maps")
     p.set_defaults(func=cmd_audit)

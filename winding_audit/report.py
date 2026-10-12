@@ -18,8 +18,12 @@ def pair_row(a: Winding, b: Winding, sp: SpacingResult, sc: SheetCountResult | N
         h = sc.histogram()
         row.update({f"sheet_{k}": v for k, v in h.items()})
         n, both = max(h["n"], 1), max(h["both_on_sheet"], 1)
+        row["node_tol"] = sc.node_tol
         row["frac_node_off_sheet"] = h["node_off_sheet"] / n            # of this winding's assessed nodes
         row["frac_neighbour_off_sheet"] = h["neighbour_off_sheet"] / n
+        for k in h:                                                     # frac_node_within_1 / _2 / _3 voxels
+            if k.startswith("node_within_"):
+                row[f"frac_{k}"] = h[k] / n
         row["frac_sheet_adjacent"] = h["adjacent"] / both                # of nodes with both ends on a sheet
         row["frac_sheet_merged"] = h["merged"] / both
         row["frac_sheet_fused"] = h["fused"] / both
@@ -51,8 +55,9 @@ def summarize(rows: list[dict]) -> dict:
     if "frac_sheet_adjacent" in rows[0]:
         nb = sum(r["sheet_both_on_sheet"] for r in rows)
         bsum = lambda k: sum(r[k] * r["sheet_both_on_sheet"] for r in rows) / max(nb, 1)
-        out.update({"frac_node_off_sheet": wsum("frac_node_off_sheet"),
+        out.update({"node_tol": rows[0].get("node_tol"), "frac_node_off_sheet": wsum("frac_node_off_sheet"),
                     "frac_neighbour_off_sheet": wsum("frac_neighbour_off_sheet"),
+                    **{k: wsum(k) for k in rows[0] if k.startswith("frac_node_within_")},
                     "nodes_both_on_sheet": nb, "frac_sheet_adjacent": bsum("frac_sheet_adjacent"),
                     "frac_sheet_merged": bsum("frac_sheet_merged"), "frac_sheet_fused": bsum("frac_sheet_fused"),
                     "frac_sheet_skipped": bsum("frac_sheet_skipped")})

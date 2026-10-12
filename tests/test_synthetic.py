@@ -115,6 +115,28 @@ def test_node_off_sheet_is_reported(dataset):
     assert (_assessed(sp.flag[:, inside]) == OK).mean() > 0.9      # spacing alone cannot see this fault
 
 
+def test_node_sheet_distance(dataset):
+    """Clean nodes sit on their sheet (distance 0); the gap region of w2 is half a pitch out, 3.5 voxels from the
+    nearest sheet surface (less voxelisation); a tolerance of 2 voxels keeps the 1.5-voxel offset of w1 on its sheet."""
+    surface, ws, thetas, _ = dataset
+    sp = neighbour_spacing(ws[2], ws[3])
+    sc = sheet_counts(ws[2], sp, surface, node_tol=2.0)
+    outside = ~_theta_cols(thetas, 4.7, 6.1)
+    d_out = sc.node_dist[:, outside]
+    d_out = d_out[np.isfinite(d_out)]
+    assert np.median(d_out) == 0 and (d_out <= 1).mean() > 0.97
+    inside = _interior(thetas, 5.0, 5.8, margin=0.15)
+    d_in = sc.node_dist[:, inside]
+    d_in = d_in[np.isfinite(d_in)]
+    assert (d_in > 2.5).mean() > 0.9           # the sheet is 3 voxels thick: 5 - 1.5 from its surface
+    assert sc.histogram()["node_within_3"] < sc.histogram()["n"]
+    sp1 = neighbour_spacing(ws[0], ws[1])
+    sc1 = sheet_counts(ws[0], sp1, surface, node_tol=2.0)
+    v = sc1.verdict[:, _interior(thetas, 4.0, 4.8, margin=0.15)]
+    v = v[v != 5]
+    assert (v == S_ADJACENT).mean() > 0.9
+
+
 def test_cli_audit_runs(dataset, tmp_path):
     from winding_audit.cli import main
     _, _, _, paths = dataset

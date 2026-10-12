@@ -46,26 +46,29 @@ class Winding:
         return self.xyz[v], rc
 
 
-def load_winding(path: str) -> Winding:
+def load_winding(path: str, name: str | None = None) -> Winding:
     xs, ys, zs = (tifffile.imread(os.path.join(path, f"{c}.tif")).astype(np.float64) for c in "xyz")
     xyz = np.stack([xs, ys, zs], -1)
     bad = (xyz < -0.5).any(-1) | ~np.isfinite(xyz).all(-1)
     xyz[bad] = np.nan
     meta_path = os.path.join(path, "meta.json")
     meta = json.load(open(meta_path)) if os.path.exists(meta_path) else {}
-    return Winding(os.path.basename(os.path.normpath(path)), path, xyz, meta)
+    return Winding(name or os.path.basename(os.path.normpath(path)), path, xyz, meta)
 
 
-def list_windings(folder: str, skip_substrings: tuple[str, ...] = ("spliced",)) -> list[Winding]:
-    """All tifxyz subfolders named w<NNN>..., sorted by winding index."""
+def list_windings(folder: str, skip_substrings: tuple[str, ...] = ("spliced",), subdir: str = "") -> list[Winding]:
+    """All tifxyz subfolders named w<NNN>..., sorted by winding index.
+
+    ``subdir``: where the tifxyz sits inside each winding folder, e.g. "tifxyz/flatten.tifxyz" for lasagna flatten
+    output (w070_tag/tifxyz/flatten.tifxyz/x.tif); the winding keeps the outer folder's name."""
     out = []
     for name in os.listdir(folder):
-        p = os.path.join(folder, name)
+        p = os.path.join(folder, name, subdir) if subdir else os.path.join(folder, name)
         if not os.path.isdir(p) or not os.path.exists(os.path.join(p, "x.tif")):
             continue
         if any(s in name for s in skip_substrings) or _WINDING_RE.search(name) is None:
             continue
-        out.append(load_winding(p))
+        out.append(load_winding(p, name))
     out.sort(key=lambda w: w.index)
     return out
 

@@ -19,7 +19,7 @@ def winding_grid_figure(name: str, sp: SpacingResult, sc: SheetCountResult | Non
     from matplotlib.colors import ListedColormap
 
     H, W = sp.flag.shape
-    rows = 3 if sc is not None else 2
+    rows = 4 if sc is not None else 2
     fig, axes = plt.subplots(rows, 1, figsize=(min(18, 4 + W / 40), 2.2 * rows + 1), dpi=110, sharex=True)
     axes = np.atleast_1d(axes)
     unit = "mm" if voxel_um else "grid steps"
@@ -48,6 +48,13 @@ def winding_grid_figure(name: str, sp: SpacingResult, sc: SheetCountResult | Non
         axes[2].set_title("surface prediction: green adjacent, red same sheet (fit), blue gap filled by the prediction "
                           "(fused), orange a sheet skipped, purple node off any sheet, lilac neighbour off sheet")
         axes[2].set_ylabel(f"along axis ({unit})")
+        im = axes[3].imshow(sc.node_dist, cmap="magma_r", vmin=0, vmax=sc.node_dist[np.isfinite(sc.node_dist)].max()
+                            if np.isfinite(sc.node_dist).any() else 1, extent=extent, interpolation="nearest",
+                            aspect="auto")
+        axes[3].set_title(f"distance from the node to the nearest predicted-sheet voxel (voxels; on sheet when "
+                          f"<= {sc.node_tol:g})")
+        axes[3].set_ylabel(f"along axis ({unit})")
+        fig.colorbar(im, ax=axes[3], fraction=0.02, pad=0.01)
     axes[-1].set_xlabel(f"around the turn ({unit})")
     fig.tight_layout()
     os.makedirs(os.path.dirname(out_png) or ".", exist_ok=True)
