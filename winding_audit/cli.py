@@ -19,7 +19,7 @@ import numpy as np
 
 from . import report as rep
 from .figures import winding_grid_figure
-from .sheets import open_surface, sheet_counts
+from .sheets import open_surface, prediction_pitch, sheet_counts
 from .spacing import neighbour_spacing
 from .tifxyz import list_windings, load_winding, save_winding
 
@@ -43,7 +43,10 @@ def cmd_audit(a):
             if m["verdict"].size:
                 verdicts[w1.name] = m["verdict"]
             continue
-        sp = neighbour_spacing(w1, w2, a.merge_frac, a.skip_frac)
+        # the pitch comes from the prediction when there is one: a pair on one sheet cannot shrink it
+        pitch = _retry(lambda: prediction_pitch(w1, surface, a.threshold)) if surface is not None else None
+        sp = neighbour_spacing(w1, w2, a.merge_frac, a.skip_frac,
+                               pitch=pitch if pitch is not None and np.isfinite(pitch) else None)
         sc = (_retry(lambda: sheet_counts(w1, sp, surface, a.threshold, node_tol=a.node_tol, radius=a.radius))
               if surface is not None else None)
         row = rep.pair_row(w1, w2, sp, sc, a.voxel_um)
@@ -60,7 +63,8 @@ def cmd_audit(a):
         if a.grid_figures:
             winding_grid_figure(w1.name, sp, sc, os.path.join(a.out, "windings", f"{w1.name}.png"), w1.grid_step,
                                 a.voxel_um)
-        print(f"{w1.name:>16s} -> {w2.name:<16s} pitch {sp.pitch:5.1f} vox  spacing merged {row['frac_merged']:.3f} "
+        print(f"{w1.name:>16s} -> {w2.name:<16s} pitch {sp.pitch:5.1f} vox, pair spacing "
+              f"{row['pair_median_vox']:5.1f}  spacing merged {row['frac_merged']:.3f} "
               f"skipped {row['frac_skipped']:.3f}" + (f" | off-sheet {row['frac_node_off_sheet']:.3f} | sheets: "
               f"adjacent {row['frac_sheet_adjacent']:.3f} merged {row['frac_sheet_merged']:.3f} "
               f"fused {row['frac_sheet_fused']:.3f} skipped {row['frac_sheet_skipped']:.3f}" if sc is not None else ""),

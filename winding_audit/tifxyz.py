@@ -85,3 +85,29 @@ def save_winding(w: Winding, out_dir: str) -> str:
         meta["bbox"] = [w.xyz[v].min(0).tolist(), w.xyz[v].max(0).tolist()]
     json.dump(meta, open(os.path.join(out_dir, "meta.json"), "w"), indent=2)
     return out_dir
+
+
+def grid_normals(xyz: np.ndarray) -> np.ndarray:
+    """Unit normals of a tifxyz grid (H, W, 3), NaN where undefined: cross product of the column and row tangents
+    (central differences where both neighbours exist, one-sided otherwise)."""
+    def tangent(axis):
+        fwd = np.roll(xyz, -1, axis) - xyz
+        bwd = xyz - np.roll(xyz, 1, axis)
+        n = xyz.shape[axis]
+        sl = [slice(None)] * 3
+        sl[axis] = slice(n - 1, n)
+        fwd[tuple(sl)] = np.nan
+        sl[axis] = slice(0, 1)
+        bwd[tuple(sl)] = np.nan
+        f_ok, b_ok = np.isfinite(fwd).all(-1), np.isfinite(bwd).all(-1)
+        t = np.full_like(xyz, np.nan)
+        both = f_ok & b_ok
+        t[both] = 0.5 * (fwd[both] + bwd[both])
+        t[f_ok & ~b_ok] = fwd[f_ok & ~b_ok]
+        t[b_ok & ~f_ok] = bwd[b_ok & ~f_ok]
+        return t
+    n = np.cross(tangent(1), tangent(0))
+    norm = np.linalg.norm(n, axis=-1, keepdims=True)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        n = n / np.where(norm > 1e-9, norm, np.nan)
+    return n

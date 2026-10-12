@@ -27,7 +27,7 @@ import zarr
 zarr.config.set({"async.concurrency": 2})   # this tool shares the machine; one chunk at a time is enough
 
 from .spacing import SpacingResult, UNASSESSED
-from .tifxyz import Winding
+from .tifxyz import Winding, grid_normals
 
 
 S_ADJACENT, S_MERGED, S_SKIPPED, S_START_OFF, S_END_OFF, S_UNASSESSED, S_FUSED = 0, 1, 2, 3, 4, 5, 6
@@ -147,6 +147,32 @@ def node_sheet_distance(arr, pts_xyz: np.ndarray, threshold: int = 128, radius: 
             cand = np.where(hit, norms[None, :], np.inf).min(1)
             out[ss] = np.minimum(out[ss], cand)
     return out
+
+
+def prediction_pitch(a: Winding, surface, threshold: int = 128, n_sample: int = 2000, half_span: float = 40.0,
+                     min_gap: float = 3.0, seed: int = 0) -> float:
+    """The sheet pitch read from the prediction itself: along the normals of a sample of the winding's nodes, the
+    median spacing between consecutive predicted-sheet runs (run centres; gaps under ``min_gap`` voxels, a sheet
+    split in two, are ignored). Unlike a pair's own median spacing, it cannot shrink when the two windings of the
+    pair sit on one sheet."""
+    n = grid_normals(a.xyz)
+    ok = a.valid & np.isfinite(n).all(-1)
+    idx = np.flatnonzero(ok)
+    if len(idx) == 0:
+        return float("nan")
+    idx = np.random.default_rng(seed).choice(idx, min(n_sample, len(idx)), replace=False)
+    r, c = np.unravel_index(idx, ok.shape)
+    p, nv = a.xyz[r, c], n[r, c]
+    t = np.arange(-half_span, half_span + 1)
+    on = sample_volume(surface, (p[:, None, :] + t[None, :, None] * nv[:, None, :]).reshape(-1, 3))
+    on = on.reshape(len(p), len(t)) >= threshold
+    d = np.diff(np.pad(on.astype(np.int8), ((0, 0), (1, 1))), axis=1)
+    rs, cs = np.nonzero(d == 1)
+    _, ce = np.nonzero(d == -1)
+    centre = (cs + ce - 1) / 2.0
+    gaps = np.diff(centre)[rs[1:] == rs[:-1]]
+    gaps = gaps[gaps >= min_gap]
+    return float(np.median(gaps)) if len(gaps) else float("nan")
 
 
 def count_runs(mask: np.ndarray) -> np.ndarray:

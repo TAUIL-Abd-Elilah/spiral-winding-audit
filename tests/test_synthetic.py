@@ -166,3 +166,40 @@ def test_collapsed_pair_is_reported(tmp_path):
     assert all(0.75 < rows[f"w00{k}_syn"]["pitch_ratio"] < 1.25 for k in (0, 3, 4))
     summary = json.load(open(out / "summary.json"))
     assert summary["pairs_collapsed"] == 1 and summary["pairs_stretched"] == 1
+
+
+def test_touching_windings_with_offset_nodes_are_merged():
+    """Two windings on one sheet whose nodes sit half a grid step apart around the turn: the nearest *node* is ~5
+    voxels away (half a pitch), the nearest *surface* point ~0. The surface distance must call it merged."""
+    from winding_audit.spacing import MERGED, neighbour_spacing
+    from winding_audit.tifxyz import Winding
+    centre, r0, n_theta = (89.5, 89.5), 40.0, 24
+    thetas = np.linspace(0, 2 * np.pi, n_theta, endpoint=False)
+    half = np.pi / n_theta
+    zs = np.arange(0.5, 40, 10.0)
+
+    def winding(n, th):
+        r = r0 + PITCH * (n + th / (2 * np.pi))
+        xyz = np.empty((len(zs), len(th), 3))
+        xyz[..., 0] = centre[1] + r * np.cos(th)
+        xyz[..., 1] = centre[0] + r * np.sin(th)
+        xyz[..., 2] = zs[:, None]
+        return Winding(f"w{n:03d}", "", xyz, {"scale": [0.1, 0.1]})
+
+    a = winding(1, thetas)
+    b = winding(1, thetas + half)                  # same sheet, nodes shifted half a column
+    b.xyz[..., 2] += 5.0                           # and half a row
+    node = neighbour_spacing(a, b, pitch=PITCH, to_surface=False)
+    surf = neighbour_spacing(a, b, pitch=PITCH)
+    inner = np.zeros_like(a.valid)
+    inner[1:-1, 1:-1] = True                       # the neighbour's plane is defined away from its border
+    assert np.nanmedian(node.distance[inner]) > 0.3 * PITCH         # node distance misses the merger
+    assert (surf.flag[inner] == MERGED).mean() > 0.9                  # surface distance finds it
+    assert np.nanmedian(surf.distance[inner]) < 1.0
+
+
+def test_prediction_pitch(dataset):
+    from winding_audit.sheets import prediction_pitch
+    surface, ws, _, _ = dataset
+    for k in (1, 2, 3):
+        assert abs(prediction_pitch(ws[k], surface) - PITCH) < 1.5

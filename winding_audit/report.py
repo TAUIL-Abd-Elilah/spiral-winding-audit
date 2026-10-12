@@ -17,7 +17,12 @@ COLLAPSED, STRETCHED = 0.75, 1.25    # pair pitch / local pitch outside these: t
 
 def pair_row(a: Winding, b: Winding, sp: SpacingResult, sc: SheetCountResult | None, voxel_um: float | None) -> dict:
     row = {"winding": a.name, "next": b.name, "n_nodes": int(a.valid.sum()), **sp.fractions()}
-    row["pitch_vox"] = sp.pitch
+    row["pitch_vox"] = sp.pitch                       # the pitch the flags use (prediction pitch when available)
+    d = sp.distance[np.isin(sp.flag, (OK, MERGED, SKIPPED))]
+    row["pair_median_vox"] = float(np.median(d)) if len(d) else None
+    row["pitch_source"] = "prediction" if sc is not None else "pair"
+    row["pitch_ratio"] = (row["pair_median_vox"] / sp.pitch
+                          if sc is not None and row["pair_median_vox"] is not None and sp.pitch else None)
     if sc is not None:
         h = sc.histogram()
         row.update({f"sheet_{k}": v for k, v in h.items()})
@@ -39,9 +44,11 @@ def pair_row(a: Winding, b: Winding, sp: SpacingResult, sc: SheetCountResult | N
 
 
 def add_local_pitch(rows: list[dict], voxel_um: float | None = None, half_window: int = 3):
-    """Local pitch = the mean pair pitch over +-half_window neighbouring pairs (the band's radial span per winding
-    there). A pair whose two windings sit on one sheet has a small median spacing of its own and hides from its own
-    pitch; against the local pitch it shows (ratio well below 1, its neighbour pair above 1)."""
+    """Without a prediction (spacing only), the pitch ratio is taken against the local pitch: the mean pair pitch
+    over +-half_window neighbouring pairs (the band's radial span per winding there). Rows that already have a
+    ratio against the prediction pitch keep it."""
+    if all(r.get("pitch_source") == "prediction" and r.get("pitch_ratio") is not None for r in rows):
+        return rows
     def pv(r):
         if r.get("pitch_vox") is not None:
             return r["pitch_vox"]

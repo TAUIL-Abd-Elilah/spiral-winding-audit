@@ -30,9 +30,9 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from .sheets import sample_volume
+from .sheets import prediction_pitch, sample_volume
 from .spacing import neighbour_spacing
-from .tifxyz import Winding
+from .tifxyz import Winding, grid_normals  # noqa: F401  (grid_normals re-exported)
 
 R_KEPT, R_MOVED, R_UNREPAIRED, R_REJECTED, R_NOT_ASSESSED, R_SHARED = 0, 1, 2, 3, 4, 5
 REPAIR_STATUS_NAMES = {R_KEPT: "kept", R_MOVED: "moved", R_SHARED: "kept_shared_run", R_UNREPAIRED: "unrepaired",
@@ -46,32 +46,6 @@ class RepairResult:
     status: np.ndarray          # (H, W) int8 R_*
     pitch: float
     stats: dict = field(default_factory=dict)
-
-
-def grid_normals(xyz: np.ndarray) -> np.ndarray:
-    """Unit normals of a tifxyz grid (H, W, 3), NaN where undefined: cross product of the column and row tangents
-    (central differences where both neighbours exist, one-sided otherwise)."""
-    def tangent(axis):
-        fwd = np.roll(xyz, -1, axis) - xyz
-        bwd = xyz - np.roll(xyz, 1, axis)
-        n = xyz.shape[axis]
-        sl = [slice(None)] * 3
-        sl[axis] = slice(n - 1, n)
-        fwd[tuple(sl)] = np.nan
-        sl[axis] = slice(0, 1)
-        bwd[tuple(sl)] = np.nan
-        f_ok, b_ok = np.isfinite(fwd).all(-1), np.isfinite(bwd).all(-1)
-        t = np.full_like(xyz, np.nan)
-        both = f_ok & b_ok
-        t[both] = 0.5 * (fwd[both] + bwd[both])
-        t[f_ok & ~b_ok] = fwd[f_ok & ~b_ok]
-        t[b_ok & ~f_ok] = bwd[b_ok & ~f_ok]
-        return t
-    n = np.cross(tangent(1), tangent(0))
-    norm = np.linalg.norm(n, axis=-1, keepdims=True)
-    with np.errstate(invalid="ignore", divide="ignore"):
-        n = n / np.where(norm > 1e-9, norm, np.nan)
-    return n
 
 
 def edge_stretch(xyz: np.ndarray, grid_step: float) -> dict:
@@ -100,11 +74,13 @@ def _run_id_at(runid: np.ndarray, centre_idx: np.ndarray, w: int) -> np.ndarray:
 
 def repair_winding(a: Winding, prev: Winding, nxt: Winding, surface, threshold: int = 128, node_tol: float = 2.0,
                    max_shift_frac: float = 1.25, search_frac: float = 2.5, jump_frac: float = 0.4,
-                   step: float = 1.0) -> RepairResult:
+                   step: float = 1.0, pitch: float | None = None) -> RepairResult:
     H, W = a.xyz.shape[:2]
-    sp_n = neighbour_spacing(a, nxt)
-    sp_p = neighbour_spacing(a, prev)
-    pitch = float(np.nanmedian([sp_n.pitch, sp_p.pitch]))
+    if pitch is None or not np.isfinite(pitch):
+        pitch = prediction_pitch(a, surface, threshold)
+    pitch = float(pitch)
+    sp_n = neighbour_spacing(a, nxt, pitch=pitch)
+    sp_p = neighbour_spacing(a, prev, pitch=pitch)
     status = np.full((H, W), R_NOT_ASSESSED, np.int8)
     shift = np.full((H, W), np.nan)
     shift[a.valid] = 0.0
@@ -112,7 +88,7 @@ def repair_winding(a: Winding, prev: Winding, nxt: Winding, surface, threshold: 
     # the neighbours' positions are read by projecting their nearest points onto the normal; that holds even where
     # the spacing check left a node unassessed (its nearest point on the neighbour's border), as long as the nearest
     # point is not far to the side (the neighbour has no coverage there)
-    side_max = max(2.0 * a.grid_step, 2.0 * float(np.nanmedian([sp_n.pitch, sp_p.pitch])))
+    side_max = max(2.0 * a.grid_step, 2.0 * pitch)
     ok = a.valid & np.isfinite(n).all(-1) & np.isfinite(sp_n.distance) & np.isfinite(sp_p.distance)
     for q in (sp_n.nearest, sp_p.nearest):
         d = np.where(ok[..., None], q - a.xyz, 0.0)
