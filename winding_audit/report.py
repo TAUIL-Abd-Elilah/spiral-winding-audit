@@ -102,7 +102,7 @@ def cross_section(windings: list[Winding], flags: dict[str, np.ndarray], z0: flo
         f = flags.get(w.name)
         c = [colors[int(k)] for k in (f[v] if f is not None else np.full(v.sum(), UNASSESSED))]
         ax.scatter(w.xyz[v, 0], w.xyz[v, 1], s=3, c=c, linewidths=0)
-    ax.set_title(f"{title} z={z0:.0f}: {legend}", fontsize=8)
+    ax.set_title(f"{title} z={z0:.0f}\n{legend}", fontsize=8, wrap=True)
     ax.set_xlabel("x (voxels)")
     ax.set_ylabel("y (voxels)")
     ax.set_aspect("equal")
