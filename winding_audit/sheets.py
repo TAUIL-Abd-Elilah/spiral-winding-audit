@@ -8,7 +8,8 @@ predicted sheet is a finding on its own (`node_off_sheet`: the snap left it in a
 a render at that node samples nothing). When both ends are on a sheet, the runs of sheet voxels from the node to the
 neighbour decide the verdict:
 
-    1 run   -> both windings on one sheet (merged)
+    1 run, neighbour closer than half a pitch -> both windings on one sheet (merged: a fit error)
+    1 run, neighbour about a pitch away       -> the prediction fills the gap between the wraps (fused: a model error)
     2 runs  -> adjacent wraps (ok)
     3+ runs -> at least one wrap between them was skipped
 
@@ -27,9 +28,10 @@ from .spacing import SpacingResult, UNASSESSED
 from .tifxyz import Winding
 
 
-S_ADJACENT, S_MERGED, S_SKIPPED, S_START_OFF, S_END_OFF, S_UNASSESSED = 0, 1, 2, 3, 4, 5
+S_ADJACENT, S_MERGED, S_SKIPPED, S_START_OFF, S_END_OFF, S_UNASSESSED, S_FUSED = 0, 1, 2, 3, 4, 5, 6
 SHEET_VERDICT_NAMES = {S_ADJACENT: "adjacent", S_MERGED: "merged", S_SKIPPED: "skipped",
-                       S_START_OFF: "node_off_sheet", S_END_OFF: "neighbour_off_sheet", S_UNASSESSED: "unassessed"}
+                       S_START_OFF: "node_off_sheet", S_END_OFF: "neighbour_off_sheet", S_UNASSESSED: "unassessed",
+                       S_FUSED: "fused"}
 
 
 @dataclass
@@ -46,7 +48,7 @@ class SheetCountResult:
         return {"n": int(assessed.sum()), "node_off_sheet": int((v == S_START_OFF).sum()),
                 "neighbour_off_sheet": int((v == S_END_OFF).sum()), "both_on_sheet": int(both.sum()),
                 "adjacent": int((v == S_ADJACENT).sum()), "merged": int((v == S_MERGED).sum()),
-                "skipped": int((v == S_SKIPPED).sum())}
+                "fused": int((v == S_FUSED).sum()), "skipped": int((v == S_SKIPPED).sum())}
 
 
 def open_surface(path: str, group: str = "0"):
@@ -93,7 +95,7 @@ def count_runs(mask: np.ndarray) -> np.ndarray:
 
 
 def sheet_counts(a: Winding, spacing: SpacingResult, surface, threshold: int = 128, step: float = 1.0,
-                 margin: float = 3.0, pitch_cap: float = 4.0) -> SheetCountResult:
+                 margin: float = 3.0, pitch_cap: float = 4.0, fuse_frac: float = 0.5) -> SheetCountResult:
     """Sheet runs along node(A) -> nearest(B) segments, for the nodes that spacing assessed."""
     H, W = a.xyz.shape[:2]
     runs = np.full((H, W), -1, np.int8)
@@ -137,7 +139,11 @@ def sheet_counts(a: Winding, spacing: SpacingResult, surface, threshold: int = 1
     v[~s_on] = S_START_OFF
     v[s_on & ~e_on] = S_END_OFF
     both = s_on & e_on
-    v[both & (r_between <= 1)] = S_MERGED
+    one_run = both & (r_between <= 1)
+    # one unbroken run from node to neighbour: at a short distance the two windings sit on one sheet (a fit error);
+    # at about a pitch the prediction itself fills the gap between two wraps (the model fused the sheets there)
+    v[one_run & (d < fuse_frac * spacing.pitch)] = S_MERGED
+    v[one_run & (d >= fuse_frac * spacing.pitch)] = S_FUSED
     v[both & (r_between == 2)] = S_ADJACENT
     v[both & (r_between >= 3)] = S_SKIPPED
     verdict[rc[:, 0], rc[:, 1]] = v

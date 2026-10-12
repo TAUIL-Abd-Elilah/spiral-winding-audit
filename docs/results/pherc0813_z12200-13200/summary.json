@@ -1,0 +1,15 @@
+{
+ "pairs": 119,
+ "nodes_assessed": 1990326,
+ "frac_merged": 0.036647262810213,
+ "frac_skipped": 0.09050225942885738,
+ "frac_node_off_sheet": 0.4180305135942554,
+ "frac_neighbour_off_sheet": 0.18784158976971613,
+ "nodes_both_on_sheet": 784443,
+ "frac_sheet_adjacent": 0.6899405055561717,
+ "frac_sheet_merged": 0.11189595674892885,
+ "frac_sheet_fused": 0.10465260063510032,
+ "frac_sheet_skipped": 0.09351093705979911,
+ "area_cm2": 702.0682483197442,
+ "seconds": 1150.4
+}

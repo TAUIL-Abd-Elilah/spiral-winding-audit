@@ -22,6 +22,7 @@ def pair_row(a: Winding, b: Winding, sp: SpacingResult, sc: SheetCountResult | N
         row["frac_neighbour_off_sheet"] = h["neighbour_off_sheet"] / n
         row["frac_sheet_adjacent"] = h["adjacent"] / both                # of nodes with both ends on a sheet
         row["frac_sheet_merged"] = h["merged"] / both
+        row["frac_sheet_fused"] = h["fused"] / both
         row["frac_sheet_skipped"] = h["skipped"] / both
     step = a.grid_step
     row["area_cm2"] = float(a.valid.sum()) * step * step * ((voxel_um or 1.0) * 1e-4) ** 2 if voxel_um else None
@@ -53,7 +54,8 @@ def summarize(rows: list[dict]) -> dict:
         out.update({"frac_node_off_sheet": wsum("frac_node_off_sheet"),
                     "frac_neighbour_off_sheet": wsum("frac_neighbour_off_sheet"),
                     "nodes_both_on_sheet": nb, "frac_sheet_adjacent": bsum("frac_sheet_adjacent"),
-                    "frac_sheet_merged": bsum("frac_sheet_merged"), "frac_sheet_skipped": bsum("frac_sheet_skipped")})
+                    "frac_sheet_merged": bsum("frac_sheet_merged"), "frac_sheet_fused": bsum("frac_sheet_fused"),
+                    "frac_sheet_skipped": bsum("frac_sheet_skipped")})
     if rows[0].get("area_cm2") is not None:
         out["area_cm2"] = sum(r["area_cm2"] for r in rows)
     return out

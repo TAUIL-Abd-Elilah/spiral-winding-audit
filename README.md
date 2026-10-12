@@ -37,6 +37,27 @@ skipped), worst on the inner windings. This tool makes that visible per node, pe
    slice, coloured green ok / red merged / orange skipped / grey unassessed). The audit is resumable: pairs already
    written are skipped on a re-run.
 
+## First results (12 October 2026)
+
+Three bands fitted with the PHerc. 343 recipe (villa `fit_spiral` at `0fb38c45`, 20k steps, snapped onto the
+published m7 prediction at level 0), 120 windings each, audited against the same prediction. Fractions are of the
+nodes with both ends on a predicted sheet, except "on no sheet", which is of all assessed nodes.
+
+| band | voxel | area | on no sheet | adjacent | same sheet (fit) | gap filled by prediction | wrap skipped | time |
+|---|---|---|---|---|---|---|---|---|
+| PHerc. 0175A, z 6900–7900 | 8.64 µm | 645 cm² | 22 % | 77 % | 9 % | 11 % | 3 % | 22 min |
+| PHerc. 0813, z 12200–13200 | 9.36 µm | 702 cm² | 42 % | 69 % | 11 % | 10 % | 9 % | 19 min |
+| PHerc. 0800, z 5300–6300 | 8.64 µm | 661 cm² | 35 % | 62 % | 15 % | 18 % | 5 % | 19 min |
+
+On PHerc. 0175A the outer windings (w050–w129, pitch ~16 voxels) are 88–95 % adjacent with 2–6 % same-sheet nodes;
+the inner core (w010–w040, pitch 7–11 voxels) is only 13–35 % adjacent, with the rest split between windings on one
+sheet and a prediction that no longer separates the wraps. The 22–42 % of nodes on no predicted sheet are where a
+render samples the gap rather than papyrus.
+
+![PHerc. 0175A winding w070: flags, distance and sheet verdict on the winding grid](docs/pherc0175a_w070.png)
+
+![PHerc. 0175A cross-section at z 7400, all windings over the prediction](docs/pherc0175a_z7400.png)
+
 ## Use
 
 ```

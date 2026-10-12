@@ -36,6 +36,19 @@ def make_volume(shape_zyx=(24, 180, 180), r0=20.0, pitch=10.0, thickness=3.0, n_
     return vol, (cy, cx)
 
 
+def fuse_sheets(vol, w, t0, t1, r0=20.0, pitch=10.0, centre=None):
+    """Fill the gap between sheet w and sheet w+1 for theta in [t0, t1): the prediction fuses two wraps there."""
+    Z, Y, X = vol.shape
+    cy, cx = centre or ((Y - 1) / 2, (X - 1) / 2)
+    yy, xx = np.mgrid[0:Y, 0:X].astype(np.float64)
+    r = np.hypot(xx - cx, yy - cy)
+    theta = np.mod(np.arctan2(yy - cy, xx - cx), 2 * np.pi)
+    u = (r - r0) / pitch - theta / (2 * np.pi)
+    fill = (u >= w) & (u <= w + 1) & (theta >= t0) & (theta < t1)
+    vol[:, fill] = 200
+    return vol
+
+
 def make_windings(n_sheets=6, Z=24, r0=20.0, pitch=10.0, centre=(89.5, 89.5), n_theta=120, grid_step=2.0):
     """Winding n on sheet n: grid rows = z (every grid_step voxels), columns = theta."""
     cy, cx = centre

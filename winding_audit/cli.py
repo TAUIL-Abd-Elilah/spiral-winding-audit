@@ -53,7 +53,8 @@ def cmd_audit(a):
         print(f"{w1.name:>16s} -> {w2.name:<16s} pitch {sp.pitch:5.1f} vox  spacing merged {row['frac_merged']:.3f} "
               f"skipped {row['frac_skipped']:.3f}" + (f" | off-sheet {row['frac_node_off_sheet']:.3f} | sheets: "
               f"adjacent {row['frac_sheet_adjacent']:.3f} merged {row['frac_sheet_merged']:.3f} "
-              f"skipped {row['frac_sheet_skipped']:.3f}" if sc is not None else ""), flush=True)
+              f"fused {row['frac_sheet_fused']:.3f} skipped {row['frac_sheet_skipped']:.3f}" if sc is not None else ""),
+              flush=True)
     rep.write_rows(rows, a.out)
     summary = rep.summarize(rows)
     summary["seconds"] = round(time.time() - t0, 1)

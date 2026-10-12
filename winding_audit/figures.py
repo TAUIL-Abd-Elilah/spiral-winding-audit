@@ -42,10 +42,11 @@ def winding_grid_figure(name: str, sp: SpacingResult, sc: SheetCountResult | Non
     if sc is not None:
         v = sc.verdict.astype(float)
         v[sc.verdict == 5] = np.nan
-        vmap = ListedColormap(["#2ecc71", "#e74c3c", "#f39c12", "#8e44ad", "#d7bde2"])
-        axes[2].imshow(v, cmap=vmap, vmin=-0.5, vmax=4.5, extent=extent, interpolation="nearest", aspect="auto")
-        axes[2].set_title("surface prediction: green adjacent, red same sheet, orange a sheet skipped, "
-                          "purple node off any sheet, lilac neighbour off sheet")
+        v[sc.verdict == 6] = 5                      # draw 'fused' as the sixth colour
+        vmap = ListedColormap(["#2ecc71", "#e74c3c", "#f39c12", "#8e44ad", "#d7bde2", "#3498db"])
+        axes[2].imshow(v, cmap=vmap, vmin=-0.5, vmax=5.5, extent=extent, interpolation="nearest", aspect="auto")
+        axes[2].set_title("surface prediction: green adjacent, red same sheet (fit), blue gap filled by the prediction "
+                          "(fused), orange a sheet skipped, purple node off any sheet, lilac neighbour off sheet")
         axes[2].set_ylabel(f"along axis ({unit})")
     axes[-1].set_xlabel(f"around the turn ({unit})")
     fig.tight_layout()

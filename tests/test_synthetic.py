@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 
 from winding_audit import synthetic as syn
-from winding_audit.sheets import S_ADJACENT, S_MERGED, S_SKIPPED, S_START_OFF, open_surface, sheet_counts
+from winding_audit.sheets import S_ADJACENT, S_FUSED, S_MERGED, S_SKIPPED, S_START_OFF, open_surface, sheet_counts
 from winding_audit.spacing import MERGED, OK, SKIPPED, neighbour_spacing
 from winding_audit.tifxyz import list_windings
 
@@ -14,6 +14,7 @@ PITCH = 10.0
 def dataset(tmp_path_factory):
     out = tmp_path_factory.mktemp("syn")
     vol, centre = syn.make_volume(n_sheets=6, pitch=PITCH)
+    syn.fuse_sheets(vol, w=4, t0=0.3, t1=1.3, pitch=PITCH, centre=centre)                # prediction fills gap w4..w5
     ws, thetas = syn.make_windings(n_sheets=6, pitch=PITCH, centre=centre)
     syn.inject_merge(ws, thetas, w=1, t0=1.0, t1=2.0, pitch=PITCH, centre=centre)     # w1 on sheet 2 for theta 1..2
     syn.inject_skip(ws, thetas, w=4, t0=3.5, t1=4.5, pitch=PITCH, centre=centre)      # w4, w5 shifted out: w3->w4 spans 2
@@ -85,6 +86,20 @@ def test_neighbour_at_sheet_edge_is_still_adjacent(dataset):
     v_in = sc.verdict[:, inside]
     v_in = v_in[v_in != 5]
     assert (v_in == S_ADJACENT).mean() > 0.9, np.bincount(v_in, minlength=6)
+
+
+def test_fused_prediction_is_separated_from_merger(dataset):
+    """Between w4 and w5 the prediction fills the gap for theta in [0.3, 1.3): the windings are a pitch apart (spacing
+    ok) but one unbroken run joins them -> 'fused', not 'merged'."""
+    surface, ws, thetas, _ = dataset
+    sp = neighbour_spacing(ws[4], ws[5])
+    inside = _interior(thetas, 0.3, 1.3, margin=0.15)
+    assert (_assessed(sp.flag[:, inside]) == OK).mean() > 0.9
+    sc = sheet_counts(ws[4], sp, surface)
+    v_in = sc.verdict[:, inside]
+    v_in = v_in[v_in != 5]
+    assert (v_in == S_FUSED).mean() > 0.9, np.bincount(v_in, minlength=7)
+    assert (v_in == S_MERGED).mean() < 0.05
 
 
 def test_node_off_sheet_is_reported(dataset):
