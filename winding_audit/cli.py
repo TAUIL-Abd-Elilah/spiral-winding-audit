@@ -3,6 +3,8 @@
   winding-audit audit <windings dir> --surface <prediction zarr> [--group 0] --out <dir> [--voxel-um 8.64]
                       [--merge-frac 0.3] [--skip-frac 1.7] [--threshold 128] [--node-tol 2.0] [--radius 4.0]
                       [--subdir tifxyz/flatten.tifxyz] [--sections z1 z2 ..] [--no-sheets] [--grid-figures]
+  winding-audit repair <windings dir> --surface <prediction zarr> [--group 0] --out <dir> [--subdir ...]
+                       [--node-tol 2.0] [--max-shift 1.25] [--jump 0.4] [--audit --voxel-um 8.64 --sections ..]
   winding-audit synthetic <out dir> [--merge W T0 T1] [--skip W T0 T1] [--gap W T0 T1]
 """
 from __future__ import annotations
@@ -19,7 +21,7 @@ from . import report as rep
 from .figures import winding_grid_figure
 from .sheets import open_surface, sheet_counts
 from .spacing import neighbour_spacing
-from .tifxyz import list_windings
+from .tifxyz import list_windings, load_winding, save_winding
 
 
 def cmd_audit(a):
@@ -98,6 +100,58 @@ def _retry(fn, tries: int = 20, wait: float = 60.0):
             time.sleep(wait)
 
 
+def cmd_repair(a):
+    """Repair a band from the inside out; resumable (a winding already written is loaded, not redone)."""
+    import csv
+
+    from .repair import REPAIR_STATUS_NAMES, repair_winding
+
+    t0 = time.time()
+    ws = list_windings(a.windings, subdir=a.subdir)
+    if len(ws) < 3:
+        sys.exit(f"need at least three windings in {a.windings}, found {len(ws)}")
+    surface = open_surface(a.surface, a.group)
+    wdir, mdir = _ensure(a.out, "windings"), _ensure(a.out, "repair_maps")
+    rows, current = [], list(ws)
+    for i, w in enumerate(ws):
+        od = os.path.join(wdir, w.name)
+        rowf = os.path.join(mdir, f"{w.name}.json")
+        if i in (0, len(ws) - 1):                       # one neighbour only: written unchanged
+            if not os.path.exists(os.path.join(od, "x.tif")):
+                save_winding(w, od)
+            continue
+        if os.path.exists(rowf) and os.path.exists(os.path.join(od, "x.tif")):
+            current[i] = load_winding(od, w.name)
+            rows.append(json.load(open(rowf)))
+            continue
+        res = _retry(lambda: repair_winding(w, current[i - 1], ws[i + 1], surface, a.threshold, a.node_tol,
+                                            a.max_shift, jump_frac=a.jump))
+        current[i] = res.winding
+        save_winding(res.winding, od)
+        np.savez_compressed(os.path.join(mdir, f"{w.name}.npz"), shift=res.shift, status=res.status)
+        row = {"winding": w.name, **res.stats}
+        json.dump(row, open(rowf, "w"))
+        rows.append(row)
+        print(f"{w.name:>16s} pitch {res.pitch:5.1f}  " + "  ".join(
+            f"{k} {row[k]}" for k in REPAIR_STATUS_NAMES.values()) +
+            f"  median shift {row['median_abs_shift_moved']:.1f} vox  edges>1.5: "
+            f"{row['before_frac_edges_over_1p5']:.3f} -> {row['after_frac_edges_over_1p5']:.3f}", flush=True)
+    if rows:
+        with open(os.path.join(a.out, "repair.csv"), "w", newline="") as f:
+            wr = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+            wr.writeheader()
+            wr.writerows(rows)
+        tot = {k: sum(r[k] for r in rows) for k in ["n", "assessed", *REPAIR_STATUS_NAMES.values()]}
+        tot["seconds"] = round(time.time() - t0, 1)
+        json.dump(tot, open(os.path.join(a.out, "repair_summary.json"), "w"), indent=1)
+        print("repair:", json.dumps(tot), flush=True)
+    if a.audit:
+        aa = argparse.Namespace(**vars(a))
+        aa.windings, aa.subdir, aa.out = wdir, "", os.path.join(a.out, "audit")
+        aa.merge_frac, aa.skip_frac, aa.no_sheets, aa.grid_figures = 0.3, 1.7, False, a.grid_figures
+        cmd_audit(aa)
+
+
 def cmd_synthetic(a):
     from . import synthetic as syn
     vol, centre = syn.make_volume(n_sheets=a.sheets, pitch=a.pitch)
@@ -129,6 +183,18 @@ def main(argv=None):
     p.add_argument("--no-sheets", action="store_true", help="spacing only (no surface prediction)")
     p.add_argument("--grid-figures", action="store_true", help="one PNG per winding: flag, distance and sheet maps")
     p.set_defaults(func=cmd_audit)
+    r = sub.add_parser("repair", help="move flagged nodes onto the sheet between their neighbours")
+    r.add_argument("windings"); r.add_argument("--surface", required=True); r.add_argument("--group", default="0")
+    r.add_argument("--out", required=True); r.add_argument("--subdir", default="")
+    r.add_argument("--threshold", type=int, default=128); r.add_argument("--node-tol", type=float, default=2.0)
+    r.add_argument("--radius", type=float, default=4.0)
+    r.add_argument("--max-shift", type=float, default=1.25, help="largest move, in sheet pitches")
+    r.add_argument("--jump", type=float, default=0.4,
+                   help="a move larger than this (pitches) must agree with two neighbouring moves")
+    r.add_argument("--audit", action="store_true", help="audit the repaired band into <out>/audit")
+    r.add_argument("--voxel-um", type=float); r.add_argument("--sections", type=float, nargs="*")
+    r.add_argument("--grid-figures", action="store_true")
+    r.set_defaults(func=cmd_repair)
     s = sub.add_parser("synthetic", help="write a synthetic spiral scroll with optional faults")
     s.add_argument("out"); s.add_argument("--sheets", type=int, default=6); s.add_argument("--pitch", type=float, default=10.0)
     s.add_argument("--merge", nargs=3, action="append", metavar=("W", "T0", "T1"))
