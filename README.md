@@ -77,16 +77,21 @@ published m7 prediction at level 0, then lasagna-flattened), 120 windings each, 
 prediction after the snap and after the flatten (the flatten output is what gets rendered). Erwin Nieuwlaar's
 released pair is the control. "Off any sheet" and "within 0.3 pitch" are fractions of all assessed nodes; the four
 sheet verdicts are fractions of the nodes with both ends on a predicted sheet. A pair is collapsed when its median
-spacing is under 0.75 of the prediction's sheet pitch.
+spacing is under 0.75 of the prediction's sheet pitch; on the raw fit, before the snap, that means the two windings
+are too close, not yet on one sheet (the snap then puts them on one). Nodes of the raw fit are not on sheets yet,
+so its "off any sheet" figure is expected to be high.
 
 <!-- results-table -->
 | band | stage | area | off any sheet | within 0.3 pitch of the next winding | adjacent | same sheet | gap filled | wrap skipped | collapsed pairs |
 |---|---|---|---|---|---|---|---|---|---|
 | PHerc. 343, w047→w048 (Erwin Nieuwlaar, control) | flatten | 7 cm² | 28 % | 22 % | 61 % | 32 % | 4 % | 2 % | 0 of 1 |
+| PHerc. 0175A, z 6900–7900 | fit (before snap) | 645 cm² | 46 % | 3 % | 87 % | 6 % | 4 % | 3 % | 50 of 119 (198 cm²) |
 | PHerc. 0175A, z 6900–7900 | snap | 645 cm² | 14 % | 21 % | 71 % | 26 % | 1 % | 2 % | 42 of 119 (179 cm²) |
 | PHerc. 0175A, z 6900–7900 | flatten | 853 cm² | 15 % | 21 % | 71 % | 25 % | 1 % | 2 % | 41 of 119 (232 cm²) |
 | PHerc. 0175A, z 6900–7900 | flatten + repair | 853 cm² | 13 % | 20 % | 73 % | 24 % | 1 % | 2 % | 40 of 119 (218 cm²) |
+| PHerc. 0813, z 12200–13200 | snap | 702 cm² | 32 % | 17 % | 60 % | 27 % | 6 % | 7 % | 27 of 119 (178 cm²) |
 | PHerc. 0813, z 12200–13200 | flatten | 1090 cm² | 34 % | 17 % | 60 % | 27 % | 6 % | 7 % | 29 of 119 (298 cm²) |
+| PHerc. 0800, z 5300–6300 | snap | 661 cm² | 25 % | 25 % | 53 % | 37 % | 7 % | 3 % | 77 of 119 (373 cm²) |
 | PHerc. 0800, z 5300–6300 | flatten | 1037 cm² | 28 % | 24 % | 52 % | 37 % | 8 % | 3 % | 87 of 119 (722 cm²) |
 <!-- /results-table -->
 
@@ -160,6 +165,10 @@ winding-audit repair <band dir> --surface <m7 zarr root> --group 0 --out runs/ph
     --audit --voxel-um 8.64
 # repaired tifxyz in <out>/windings, per-node shift/status maps, repair.csv, and the audit of the result in <out>/audit
 ```
+
+Run the audit on the fit output too, before the snap (`meshes/fitted_<tag>` of a `fit_spiral` run): there the
+nodes are not on sheets yet, but the pitch ratio already shows where the fit has too many turns. Pairs under 0.75
+of the prediction's sheet pitch will be paired up by a nearest-sheet snap.
 
 `--surface` is the surface prediction at the same resolution level as the tifxyz coordinates (level 0 voxels for the
 spiral fitter's output). `--no-sheets` runs the spacing check only. `--subdir tifxyz/flatten.tifxyz` reads lasagna

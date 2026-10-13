@@ -1,0 +1,22 @@
+{
+ "pairs": 119,
+ "nodes_assessed": 2150995,
+ "frac_merged": 0.027384535993807517,
+ "frac_skipped": 0.055349268594301705,
+ "node_tol": 2.0,
+ "frac_node_off_sheet": 0.45968633120951,
+ "frac_neighbour_off_sheet": 0.26273840710926805,
+ "frac_node_within_1": 0.43757377399761505,
+ "frac_node_within_2": 0.54031366879049,
+ "frac_node_within_3": 0.648290674780741,
+ "nodes_both_on_sheet": 597063,
+ "frac_sheet_adjacent": 0.8732663052307713,
+ "frac_sheet_merged": 0.06071386101634166,
+ "frac_sheet_fused": 0.0381802255373386,
+ "frac_sheet_skipped": 0.027839608215548442,
+ "area_cm2": 644.7333666816002,
+ "pairs_collapsed": 50,
+ "pairs_stretched": 0,
+ "area_cm2_collapsed": 197.97790556160004,
+ "seconds": 2339.2
+}
