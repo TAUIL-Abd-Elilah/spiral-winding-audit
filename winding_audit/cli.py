@@ -5,6 +5,8 @@
                       [--subdir tifxyz/flatten.tifxyz] [--sections z1 z2 ..] [--no-sheets] [--grid-figures]
   winding-audit repair <windings dir> --surface <prediction zarr> [--group 0] --out <dir> [--subdir ...]
                        [--node-tol 2.0] [--max-shift 1.25] [--jump 0.4] [--audit --voxel-um 8.64 --sections ..]
+  winding-audit pieces <windings dir> --surface <prediction zarr> [--group 0] --out <dir> [--subdir ...]
+                       [--voxel-um 8.64] [--min-area-cm2 0.05] [--figures]
   winding-audit synthetic <out dir> [--merge W T0 T1] [--skip W T0 T1] [--gap W T0 T1]
 """
 from __future__ import annotations
@@ -21,7 +23,7 @@ from . import report as rep
 from .figures import winding_grid_figure
 from .sheets import open_surface, prediction_pitch, sheet_counts
 from .spacing import neighbour_spacing
-from .tifxyz import list_windings, load_winding, save_winding
+from .tifxyz import Winding, list_windings, load_winding, save_winding
 
 
 def cmd_audit(a):
@@ -157,6 +159,91 @@ def cmd_repair(a):
         cmd_audit(aa)
 
 
+def cmd_pieces(a):
+    """Single-sheet, deduplicated pieces per winding; resumable (a finished winding's labels are loaded)."""
+    import csv
+
+    import tifffile
+
+    from .pieces import winding_pieces
+
+    t0 = time.time()
+    ws = list_windings(a.windings, subdir=a.subdir)
+    surface = open_surface(a.surface, a.group)
+    wdir, ldir = _ensure(a.out, "windings"), _ensure(a.out, "labels")
+    rows, prev_kept = [], None
+    for i, w in enumerate(ws):
+        lab_f, row_f = os.path.join(ldir, f"{w.name}.tif"), os.path.join(ldir, f"{w.name}.json")
+        if os.path.exists(lab_f) and os.path.exists(row_f):
+            prev_kept = tifffile.imread(lab_f) > 0
+            rows.append(json.load(open(row_f)))
+            continue
+        node_cm2 = (w.grid_step * a.voxel_um * 1e-4) ** 2 if a.voxel_um else None
+        min_nodes = max(1, int(round(a.min_area_cm2 / node_cm2))) if node_cm2 else a.min_nodes
+        res = _retry(lambda: winding_pieces(w, ws[i - 1] if i else None, ws[i + 1] if i + 1 < len(ws) else None,
+                                            surface, inner_kept=prev_kept, threshold=a.threshold,
+                                            node_tol=a.node_tol, min_nodes=min_nodes))
+        prev_kept = res.kept
+        tifffile.imwrite(lab_f, res.label)
+        masked = Winding(w.name, w.path, np.where(res.kept[..., None], w.xyz, np.nan), dict(w.meta))
+        masked.meta["pieces"] = {"tool": "winding-audit pieces", "pieces": res.stats["pieces"],
+                                 "kept_nodes": res.stats["kept"], "node_tol": a.node_tol, "pitch": res.pitch}
+        save_winding(masked, os.path.join(wdir, w.name))
+        row = {"winding": w.name, **res.stats}
+        if node_cm2:
+            sizes = np.bincount(res.label.ravel())[1:]
+            row.update({"area_cm2": res.stats["n"] * node_cm2, "kept_cm2": res.stats["kept"] * node_cm2,
+                        "duplicate_cm2": res.stats["duplicate"] * node_cm2,
+                        "largest_piece_cm2": res.stats["largest"] * node_cm2,
+                        "pieces_over_1cm2": int((sizes * node_cm2 >= 1.0).sum())})
+        json.dump(row, open(row_f, "w"))
+        rows.append(row)
+        if a.figures:
+            _pieces_figure(w, res, os.path.join(a.out, "figures", f"{w.name}.png"))
+        print(f"{w.name:>16s} kept {row['kept'] / max(row['n'], 1):.2f} of {row['n']} nodes in {row['pieces']} pieces"
+              f" (largest {row['largest']}), duplicate {row['duplicate'] / max(row['n'], 1):.2f}, on-sheet "
+              f"{row['on_sheet'] / max(row['n'], 1):.2f}", flush=True)
+    if rows:
+        with open(os.path.join(a.out, "pieces.csv"), "w", newline="") as f:
+            wr = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+            wr.writeheader()
+            wr.writerows(rows)
+        keys = ["n", "on_sheet", "duplicate", "kept", "pieces"] + (
+            ["area_cm2", "kept_cm2", "duplicate_cm2", "pieces_over_1cm2"] if "area_cm2" in rows[0] else [])
+        tot = {k: sum(r[k] for r in rows) for k in keys}
+        tot["windings"] = len(rows)
+        tot["seconds"] = round(time.time() - t0, 1)
+        json.dump(tot, open(os.path.join(a.out, "pieces_summary.json"), "w"), indent=1)
+        print("pieces:", json.dumps(tot), flush=True)
+
+
+def _pieces_figure(w, res, out_png):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    img = np.full(res.label.shape, np.nan)
+    img[w.valid] = -1.0                                  # not kept
+    img[res.duplicate & w.valid] = -2.0                  # duplicate of the inner neighbour
+    k = res.label > 0
+    img[k] = (res.label[k] - 1) % 20
+    fig, ax = plt.subplots(figsize=(min(18, 4 + w.xyz.shape[1] / 40), 3.2), dpi=110)
+    cmap = plt.get_cmap("tab20").copy()
+    ax.imshow(np.where(img >= 0, img, np.nan), cmap=cmap, vmin=0, vmax=19, interpolation="nearest", aspect="auto")
+    ax.imshow(np.where(img == -1, 1.0, np.nan), cmap="Greys", vmin=0, vmax=1.5, interpolation="nearest",
+              aspect="auto")
+    ax.imshow(np.where(img == -2, 1.0, np.nan), cmap="Reds", vmin=0, vmax=1.5, interpolation="nearest",
+              aspect="auto")
+    ax.set_title(f"{w.name}: single-sheet pieces (colours), duplicate of the inner winding (red), "
+                 f"off a sheet or too small (grey); {res.stats['pieces']} pieces", fontsize=8)
+    ax.set_xlabel("around the turn (grid columns)")
+    ax.set_ylabel("along the axis (rows)")
+    fig.tight_layout()
+    os.makedirs(os.path.dirname(out_png), exist_ok=True)
+    fig.savefig(out_png)
+    plt.close(fig)
+
+
 def cmd_synthetic(a):
     from . import synthetic as syn
     vol, centre = syn.make_volume(n_sheets=a.sheets, pitch=a.pitch)
@@ -200,6 +287,15 @@ def main(argv=None):
     r.add_argument("--voxel-um", type=float); r.add_argument("--sections", type=float, nargs="*")
     r.add_argument("--grid-figures", action="store_true")
     r.set_defaults(func=cmd_repair)
+    q = sub.add_parser("pieces", help="single-sheet, deduplicated pieces of each winding (a mask per winding)")
+    q.add_argument("windings"); q.add_argument("--surface", required=True); q.add_argument("--group", default="0")
+    q.add_argument("--out", required=True); q.add_argument("--subdir", default="")
+    q.add_argument("--threshold", type=int, default=128); q.add_argument("--node-tol", type=float, default=2.0)
+    q.add_argument("--voxel-um", type=float)
+    q.add_argument("--min-area-cm2", type=float, default=0.05, help="smallest piece kept (needs --voxel-um)")
+    q.add_argument("--min-nodes", type=int, default=50, help="smallest piece kept without --voxel-um")
+    q.add_argument("--figures", action="store_true", help="one PNG per winding with the pieces")
+    q.set_defaults(func=cmd_pieces)
     s = sub.add_parser("synthetic", help="write a synthetic spiral scroll with optional faults")
     s.add_argument("out"); s.add_argument("--sheets", type=int, default=6); s.add_argument("--pitch", type=float, default=10.0)
     s.add_argument("--merge", nargs=3, action="append", metavar=("W", "T0", "T1"))
