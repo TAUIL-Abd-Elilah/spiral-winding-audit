@@ -9,6 +9,11 @@ sheet, or on a neighbouring winding's sheet, onto the sheet between its two neig
 of each winding stay on one sheet and are read only once. Numbers in this README are measurements on real fits and
 will change.
 
+**Paper:** [paper/paper.pdf](paper/paper.pdf) ("One Winding per Sheet"), built from `paper/paper.html` with
+`python paper/build.py`. **In villa:** `spiral-fitting/check_fit_against_prediction.py` (branch
+`tauil/spiral-sheet-reindex` of the author's fork) checks a fit checkpoint against the prediction in the fit's own
+spiral space.
+
 ## Why
 
 Erwin Nieuwlaar's PHerc. 343 First Letters recipe (villa `fit_spiral` → snap onto the surface prediction → lasagna
@@ -130,7 +135,7 @@ so its "off any sheet" figure is expected to be high.
   | PHerc. 0175A, z 6900–7900 | 7100, 7700 | 1.39, 1.39 | 18.3, 18.6 vox |
   | PHerc. 0813, z 12200–13200 | 12400, 13000 | 1.23, 1.20 | 18.0, 18.1 vox |
 
-  Every fit advances 17–19 voxels of radius per winding whatever the scroll, while the sheets are 22–27 voxels
+  Every fit advances 17–19 voxels of radius per winding whatever the scroll, while the sheets are 22–29 voxels
   apart along the same rays. `fit_spiral` learns its spiral pitch (`dr_per_winding`) from a starting value,
   `model_initial_dr_per_winding` = 16 by default; in the PHerc. 0800 z 6300–7800 checkpoint it ended at 16.8. The
   pitch stays where it starts, so the starting value should be the scroll's own radial sheet spacing, and the

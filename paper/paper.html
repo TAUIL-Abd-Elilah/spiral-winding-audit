@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>One Winding per Sheet</title>
+<style>
+@page { size: A4; margin: 18mm 17mm 18mm 17mm; }
+:root { --ink: #1b1d22; --muted: #5a6070; --rule: #c9ccd3; --accent: #7a2e1d; --bg: #ffffff; --tint: #f4f2ee; }
+html { background: var(--bg); }
+body { font-family: "Georgia", "Times New Roman", serif; color: var(--ink); font-size: 10.4pt; line-height: 1.42;
+       max-width: 176mm; margin: 0 auto; background: var(--bg); }
+h1 { font-size: 19pt; line-height: 1.2; margin: 0 0 4pt; text-wrap: balance; font-weight: 700; }
+.sub { font-size: 11.5pt; color: var(--muted); margin: 0 0 10pt; }
+.author { font-size: 10pt; margin: 0 0 2pt; }
+.meta { font-size: 8.8pt; color: var(--muted); margin: 0 0 12pt; }
+.abstract { background: var(--tint); border-left: 3pt solid var(--accent); padding: 8pt 11pt; margin: 0 0 12pt; font-size: 9.8pt; }
+.abstract b { font-variant: small-caps; letter-spacing: 0.04em; }
+h2 { font-size: 12.5pt; margin: 16pt 0 5pt; color: var(--accent); border-bottom: 0.6pt solid var(--rule); padding-bottom: 2pt;
+     break-after: avoid; }
+h3 { font-size: 10.6pt; margin: 10pt 0 3pt; break-after: avoid; }
+p { margin: 0 0 6pt; text-align: justify; hyphens: auto; }
+ul, ol { margin: 0 0 6pt 16pt; padding: 0; }
+li { margin: 0 0 2pt; }
+code { font-family: "Consolas", "Courier New", monospace; font-size: 8.8pt; background: var(--tint); padding: 0 2pt; }
+pre { font-family: "Consolas", "Courier New", monospace; font-size: 8.2pt; background: var(--tint); padding: 5pt 7pt;
+      white-space: pre-wrap; margin: 0 0 7pt; break-inside: avoid; }
+table { border-collapse: collapse; width: 100%; font-size: 8.7pt; margin: 4pt 0 8pt; break-inside: avoid;
+        font-variant-numeric: tabular-nums; }
+th, td { border-bottom: 0.5pt solid var(--rule); padding: 2.5pt 4pt; text-align: left; vertical-align: top; }
+th { border-bottom: 0.9pt solid var(--ink); font-weight: 700; }
+td.n, th.n { text-align: right; }
+figure { margin: 6pt 0 10pt; break-inside: avoid; }
+figure img { width: 100%; display: block; }
+figcaption { font-size: 8.6pt; color: var(--muted); margin-top: 3pt; text-align: justify; }
+figcaption b { color: var(--ink); }
+.half { width: 72%; margin-left: auto; margin-right: auto; }
+.note { font-size: 8.8pt; color: var(--muted); }
+.refs li { font-size: 8.8pt; margin-bottom: 3pt; }
+.pagebreak { break-before: page; }
+.placeholder { border: 1pt dashed var(--accent); padding: 8pt; color: var(--accent); }
+</style>
+</head>
+<body>
+
+<h1>One Winding per Sheet</h1>
+<p class="sub">Auditing and correcting spiral-fit windings of Herculaneum scrolls against the surface prediction and the CT</p>
+<p class="author">TAUIL Abd Elilah</p>
+<p class="meta">Vesuvius Challenge, Progress Prize submission, October 2026 &middot; code (MIT):
+github.com/TAUIL-Abd-Elilah/spiral-winding-audit &middot; developed with AI assistance under the author's direction</p>
+
+<div class="abstract"><b>Abstract.</b>
+The spiral-fit recipe that produced the PHerc. 343 First Letters (villa <code>fit_spiral</code>, a nearest-sheet snap
+onto the m7 surface prediction, lasagna flattening) is now the standard way to search the remaining scrolls, and its
+windings are accepted by eye. We measure them per node. On four bands of three scrolls (PHerc. 0175A, 0813, 0800;
+120 windings each), 17&ndash;24&nbsp;% of the flattened nodes lie within 0.3 sheet pitch of the next winding, and
+15&ndash;34&nbsp;% lie on no predicted sheet. Two independent CT checks confirm it: node pairs that the audit puts on one
+sheet render the same papyrus texture (correlation 0.55 against 0.28 for adjacent wraps), and the CT's own sheet
+period equals the prediction's. Counting along radial rays, the fits place 1.2&ndash;1.6 windings on each sheet:
+<code>fit_spiral</code>'s spiral pitch stays near its starting value of 16 voxels while the sheets are 22&ndash;29 voxels
+apart radially, and the snap then pairs windings on shared sheets. The winning PHerc. 343 pair shows the same on
+21&nbsp;% of a winding, mostly outside its letters. We release CPU tools that measure this before any rendering
+(<code>density</code>, <code>audit</code>), repair what a re-snap can repair (<code>repair</code>, checked against the CT),
+and mask the single-sheet surface that is read once (<code>pieces</code>).
+The same 1.5 windings per sheet appears in the fit's own spiral space, where the sheets' winding phase is nearly
+unrelated to the windings (alignment 0.11&ndash;0.15); we add this check to villa's spiral-fitting tools. A re-snap
+cannot fix extra windings; the fit must start from the roll's own pitch and be checked before rendering.
+</div>
+
+<h2>1. Problem</h2>
+<p>A scroll is a rolled sheet. Virtual unwrapping must produce, for every wrap, a surface that stays on that wrap's
+papyrus all the way round, and no surface that runs on a neighbour's papyrus. The Vesuvius Challenge lists sheet
+switches and mergers among its main bottlenecks, and its judging criteria for unwrapping ask that output surfaces
+"don't jump across sheets in cross-section".</p>
+<p>Since the PHerc. 343 award in October 2026, several groups fit a global spiral to a scroll band with villa's
+<code>fit_spiral</code>, export one surface per winding, snap each node along its normal to the nearest sheet of the
+published m7 surface prediction within &plusmn;15 voxels, flatten with lasagna, render and run ink detection. Each step
+is checked by eye on a few windings. Nothing checks that winding <i>k</i> and winding <i>k</i>+1 lie on different sheets
+everywhere, or how many sheets a fit has per winding. This work measures both, explains the failure, and gives tools that
+find it before GPU time is spent on rendering and ink.</p>
+
+<p class="note">Terminology: "sheet" here means one turn's papyrus as the surface prediction marks it. Villa's
+SCROLL_ANATOMY.md calls that the papyrus of a winding and reserves "sheet" for a manufactured kollema; the villa tool
+therefore says "layer".</p>
+
+<h2>2. Data</h2>
+<table>
+<tr><th>scroll / band</th><th>scan</th><th>windings</th><th>stages audited</th><th>CT used</th></tr>
+<tr><td>PHerc. 0175A, z 6900&ndash;7900</td><td>8.64&nbsp;&micro;m, 116&nbsp;keV</td><td>w010&ndash;w129</td><td>fit, snap, flatten, repair</td><td>66-layer renders of w070, w073, w092</td></tr>
+<tr><td>PHerc. 0813, z 12200&ndash;13200</td><td>9.36&nbsp;&micro;m</td><td>w010&ndash;w129</td><td>fit, snap, flatten</td><td>&ndash;</td></tr>
+<tr><td>PHerc. 0800, z 5300&ndash;6300</td><td>8.64&nbsp;&micro;m</td><td>w010&ndash;w129</td><td>fit, snap, flatten</td><td>cached CT chunks (3 windings)</td></tr>
+<tr><td>PHerc. 0800, z 6300&ndash;7800</td><td>8.64&nbsp;&micro;m</td><td>w010&ndash;w129</td><td>fit, snap</td><td>22-layer renders of w095&ndash;w097; cached CT (3 windings)</td></tr>
+<tr><td>PHerc. 343 (control)</td><td>8.64&nbsp;&micro;m</td><td>w047, w048 (released by E. Nieuwlaar)</td><td>flatten</td><td>66-layer render of the letter image's mesh</td></tr>
+</table>
+<p>All fits use villa <code>fit_spiral</code> at commit <code>0fb38c45</code> with 20k steps and the snap of the
+PHerc. 343 recipe; the surface prediction is the published m7 store of each volume (level 0, threshold 128).
+Windings are tifxyz grids with a 20-voxel node spacing.</p>
+
+<h2>3. Methods</h2>
+<h3>3.1 Distance to the next winding's surface</h3>
+<p>For each node of winding <i>k</i>, the nearest node of winding <i>k</i>+1 at a similar angle around the turn is found
+with a KD-tree that carries the angular position as a fourth coordinate, so the spiral seam (where the end of one
+winding meets the start of the next on the same sheet) is not read as a merger. The node is then projected onto the
+tangent plane of <i>k</i>+1 at that node. Measuring to the nearest <i>node</i> instead misses windings that lie on top
+of each other, because on a 20-voxel grid the nearest node can be 10 or more voxels to the side. Against exact
+point-to-triangle distances to the neighbouring mesh the plane distance agrees within one voxel for about 90&nbsp;% of
+nodes.</p>
+<h3>3.2 Sheet pitch from the prediction</h3>
+<p>The pitch that the thresholds refer to is the median spacing of consecutive predicted-sheet runs along the node
+normals of 2,000 sampled nodes per winding. Unlike a pair's own median spacing it cannot shrink when two windings share
+a sheet (on one PHerc. 0175A pair the own median fell to 1.4 voxels against a prediction pitch of 15.5).</p>
+<h3>3.3 Per-node verdicts</h3>
+<p>A node is on a sheet when a predicted-sheet voxel lies within 2 voxels (exact distance). With both ends of the
+node-to-neighbour segment on a sheet, the number of sheet runs along the segment gives the verdict: two runs, adjacent
+wraps; one run with the neighbour closer than half a pitch, the same sheet (a fit error); one run about a pitch away,
+the prediction fills the gap (a model error); three or more, a skipped wrap.</p>
+<h3>3.4 Windings per sheet along radial rays</h3>
+<p>In one z-slice, 180 rays are cast from the centre of the innermost winding's outline. Along each ray the crossings of
+every winding (its slice outline) and of every predicted sheet (runs closer than 4 voxels joined) are counted between
+the crossings of w040 and w115. The ratio of winding steps to sheet steps is 1 for a fit with one winding per sheet.
+Unlike spacing measured in radius, the count does not depend on the angle between the rays and the sheets.</p>
+<h3>3.5 Repair and pieces</h3>
+<p><b>Repair</b> is a snap bounded by the neighbours: along the normal, oriented from winding <i>k</i>&minus;1 to
+<i>k</i>+1, a node off any sheet, or on a neighbour's sheet closer than half a pitch, moves to the nearest sheet run
+strictly between the two neighbours' runs (at most 1.25 pitches); a move larger than 0.4 pitch must agree with two
+neighbouring moves. <b>Pieces</b> joins the on-sheet nodes of a winding across grid edges that stay on one sheet (normal
+step under 0.35 pitch, quarter points on a sheet), cuts at the edge of shared-sheet regions, and drops, from the inside
+out, the nodes that duplicate the inner neighbour's kept surface. The result is a mask per winding.</p>
+<h3>3.6 CT checks</h3>
+<p>The CT is read from existing renders (layer <i>k</i> lies <i>k</i>&minus;32.5 voxels along the outward normal) and
+from cached level-0 chunks, never re-downloaded. Three checks are used: mean depth profiles of nodes grouped by their
+distance to the prediction; the CT's own sheet period along node normals (spectral peak and first autocorrelation
+peak); and the texture correlation between the rendered surfaces of two consecutive windings at matched nodes.</p>
+
+<h2>4. Results</h2>
+<h3>4.1 Audit</h3>
+<!-- RESULTS-TABLE -->
+<p>On all three scrolls a large share of each flattened band lies on a neighbour's sheet or on no sheet. The overlap
+is partial: on PHerc. 0175A, 44 of 119 pairs share a sheet on a quarter or more of their nodes, 21 on half or more and
+6 on 70&nbsp;% or more; on PHerc. 0800, 55, 2 and 0.</p>
+<figure class="half"><img src="../docs/pherc0175a_w110_section.png" alt="">
+<figcaption><b>Figure 1.</b> PHerc. 0175A, slice z 7400: flattened windings w106&ndash;w115 over the m7 prediction
+(white). w110 (thick) and w111 (thick, dashed) run on one sheet while each other winding has a sheet of its own.</figcaption></figure>
+<figure><img src="../docs/pherc0175a_w110_flat.png" alt="">
+<figcaption><b>Figure 2.</b> w110&rarr;w111 on the winding grid: spacing flags; distance to the next winding in pitches
+(dark blue: on top of each other); sheet verdict; node-to-sheet distance. The first 40&nbsp;% of the turn shares w111's
+sheet.</figcaption></figure>
+
+<h3>4.2 The CT agrees</h3>
+<p><b>Off-sheet nodes are gaps.</b> On the PHerc. 343 control, nodes on a predicted-sheet voxel have a sharp papyrus
+peak 2.5 voxels outward, inside the ink window; nodes with no predicted sheet within 6 voxels sit in a CT trough about
+20 grey levels darker (Figure 3).</p>
+<p><b>Shared sheets are the same papyrus.</b> On two consecutive PHerc. 0800 windings (w095, w096; Figure 4), the
+rendered surface patches at matched nodes correlate at a median of 0.55 where the audit puts the windings within 0.3
+pitch, against 0.28 for adjacent wraps and 0.31 for random pairs (w096/w097: 0.60).</p>
+<p><b>The prediction does not miss sheets.</b> The CT's sheet period along node normals is 15&ndash;17 voxels on three
+PHerc. 0175A windings and 17.1&ndash;17.7 on six PHerc. 0800 windings, equal to the prediction's run spacing on the same
+lines (14&ndash;15 and 16.2&ndash;17.5), while the fitted windings there are 9.5&ndash;13 voxels apart.</p>
+<figure><img src="../docs/pherc0343_control.png" alt="">
+<figcaption><b>Figure 3.</b> PHerc. 343 control (E. Nieuwlaar's w047/w048). Left: mean CT depth profile by distance to
+the prediction. Right: verdicts inside the letter area of w047 and on the rest of the winding.</figcaption></figure>
+<figure class="half"><img src="../docs/pherc0800_duplicate_texture.png" alt="">
+<figcaption><b>Figure 4.</b> Texture correlation of the rendered surfaces of w095 and w096 at matched nodes.</figcaption></figure>
+
+<h3>4.3 Root cause: the fits have too many windings</h3>
+<!-- DENSITY-TABLE -->
+<p>Every fit advances 17&ndash;19 voxels of radius per winding, whatever the scroll, while the sheets are 22&ndash;29
+voxels apart along the same rays. <code>fit_spiral</code> learns its spiral pitch from <code>model_initial_dr_per_winding</code>
+(default 16); in the PHerc. 0800 z 6300&ndash;7800 checkpoint it ended at 16.8, and in a 190-winding refit of PHerc.
+0175A it read 15.6 after 3,000 iterations. Before the snap the windings do not touch (2.4&nbsp;% of PHerc. 0175A nodes
+within 0.3 pitch), but they are 0.6&ndash;0.7 of a sheet pitch apart; the nearest-sheet snap then puts pairs of windings
+on one sheet over part of the turn (21&nbsp;%) and leaves others to switch sheets around it. Raising the outer winding
+index only extends how far the fit reaches at the same pitch (the outer-shell loss is off in these configurations).</p>
+
+<h3>4.4 What a re-snap can and cannot repair</h3>
+<p>The neighbour-bounded repair moves 3.1&nbsp;% of the PHerc. 0175A nodes. On the three rendered windings the 811 moved
+nodes go from a mean CT of 83 at their old position (the gap) to 104 at the new one (nodes already on their sheet: 99;
+Figure 5). Nodes off any sheet drop from 15.2&nbsp;% to 12.7&nbsp;%. Windings that share a sheet stay: with both
+neighbours on the sheets around it, a winding has no free sheet to move to.</p>
+<figure class="half"><img src="../docs/pherc0175a_repair_ct.png" alt="">
+<figcaption><b>Figure 5.</b> Mean CT depth profile of kept nodes and of moved nodes at their old and new positions.</figcaption></figure>
+
+<h3>4.5 Single-sheet pieces</h3>
+<!-- PIECES-TABLE -->
+<p>The mask keeps papyrus (mean CT 99 at kept nodes) and drops gaps (90) and second copies (114). On the PHerc. 343
+control, 15 of the 18 letter centres lie in a kept piece (one through w047's copy of the same papyrus) and the other
+three keep 40&ndash;64&nbsp;% of their surroundings.</p>
+<figure><img src="../docs/pherc0175a_w111_pieces.png" alt="">
+<figcaption><b>Figure 6.</b> PHerc. 0175A w111: single-sheet pieces (colours), the part that duplicates w110 (red) and
+nodes off a sheet or in pieces too small to keep (grey).</figcaption></figure>
+
+<h2>5. Correcting the fits</h2>
+<p>The audit, the density count and the CT checks all point at the fit, not the snap or the prediction. Three
+things follow.</p>
+<h3>5.1 A check of the fit itself, before any export</h3>
+<p>A fit is a transform from scan space to a spiral space in which winding <i>k</i> is the curve
+r&nbsp;=&nbsp;dr&nbsp;(<i>k</i>&nbsp;+&nbsp;&phi;/2&pi;). Mapping the prediction's sheet voxels of a few slices through the
+checkpoint gives each voxel a fractional winding number <i>w</i>, and a correct fit puts every sheet on a whole
+<i>w</i>. The check reports, overall and per 30&deg; sector, the phase alignment of the sheets (mean resultant length
+of e<sup>2&pi;i<i>w</i></sup>; 1 = all on windings), the median number of windings between consecutive sheets at one
+angle, and the share of winding cells with no sheet nearby. It reads only the checkpoint and the prediction and runs on
+CPU in seconds per slice.</p>
+<table>
+<tr><th>fit (w040&ndash;w115)</th><th>slice</th><th class="n">windings per sheet</th><th class="n">alignment</th><th class="n">empty winding cells</th></tr>
+<tr><td>PHerc. 0800 z 6300&ndash;7800, 20k steps</td><td>z 6600</td><td class="n">1.53</td><td class="n">0.14</td><td class="n">73&nbsp;%</td></tr>
+<tr><td></td><td>z 7000</td><td class="n">1.52</td><td class="n">0.15</td><td class="n">71&nbsp;%</td></tr>
+<tr><td></td><td>z 7500</td><td class="n">1.54</td><td class="n">0.11</td><td class="n">74&nbsp;%</td></tr>
+<tr><td>PHerc. 0175A z 5900&ndash;6900, 190 windings, iteration 6,000</td><td>z 6200, 6600</td><td class="n">1.42&ndash;1.44</td><td class="n">0.02&ndash;0.05</td><td class="n">74&ndash;75&nbsp;%</td></tr>
+<tr><td>&nbsp;&nbsp;same fit, new outer windings w130&ndash;w185</td><td>z 6200, 6600</td><td class="n">1.17&ndash;1.18</td><td class="n">0.01&ndash;0.02</td><td class="n">81&ndash;82&nbsp;%</td></tr>
+</table>
+<p class="note"><b>Table 4.</b> Spiral-space check of two fits. The PHerc. 0800 value agrees with the independent
+count along radial rays in the slice (1.52&ndash;1.54, Table 2).</p>
+<figure><img src="../docs/pherc0800_spiral_space_check.png" alt="">
+<figcaption><b>Figure 7.</b> PHerc. 0800 z 6300&ndash;7800 fit: the prediction's sheet voxels of three slices in the
+fit's spiral space (red lines: windings) and, per sector, the alignment and the windings per sheet. Over
+90&ndash;210&deg;, where the prediction is fused, the fit's angle field crosses the sheets and the alignment falls to
+0.07 (0.01&ndash;0.05 in single slices).</figcaption></figure>
+
+<h3>5.2 What a re-snap can and cannot do</h3>
+<p>A snap moves nodes onto existing sheets. A fit with 1.5 windings per sheet has half again as many windings as the
+roll has turns in that range, so after any snap a third of its windings must share a sheet with a neighbour or lie in
+a gap; the
+neighbour-bounded repair (Section 4.4) fixes the nodes that have a free sheet to go to, and the pieces mask (4.5) marks
+the rest. Raising the outer winding index does not help by itself: in these configurations the outer-shell loss is off,
+the index only extends how far the fit reaches, and the 190-winding refit, at iteration 6,000, still reads 1.4 inside and 1.2 for the
+new outer windings (Table 4).</p>
+
+<h3>5.3 What should change in the fit</h3>
+<ol>
+<li><b>Start from the roll's own pitch.</b> <code>fit_spiral</code> moves its pitch little from the starting value
+(16&nbsp;&rarr;&nbsp;16.8 voxels). The starting value should be the radial sheet spacing of the scroll, which the
+density count gives directly (radius per winding &times; windings per sheet): about 25&ndash;29 voxels on PHerc. 0800,
+25&ndash;26 on PHerc. 0175A and 22 on PHerc. 0813.</li>
+<li><b>Use the alignment as a loss.</b> The phase alignment of the prediction's sheet voxels is differentiable in the
+transform and the pitch; a term rewarding whole winding numbers would pull windings onto sheets and push empty windings
+out of the gaps.</li>
+<li><b>Check every fit before rendering.</b> The spiral-space check and the density count take seconds on CPU; a fit
+that reads more than about 1.1 windings per sheet will produce duplicated papyrus after the snap.</li>
+</ol>
+<p>Items 1 and 2 need GPU refits to confirm; this work ran on CPU only, so they are stated as the change the
+measurements call for, not as a demonstrated result.</p>
+
+<h2>6. Integration</h2>
+<ul>
+<li><b>Standalone tools</b> (MIT, 23 tests on a synthetic scroll with injected faults):
+<code>density</code>, <code>audit</code>, <code>repair</code>, <code>pieces</code>; tifxyz and OME-Zarr in, tifxyz,
+CSV/JSON and figures out. github.com/TAUIL-Abd-Elilah/spiral-winding-audit</li>
+<li><b>In villa:</b> <code>spiral-fitting/check_fit_against_prediction.py</code> with a regression test, on branch
+<code>tauil/spiral-sheet-reindex</code> of the author's fork, proposed to ScrollPrize/villa.</li>
+<li><b>Where they sit in the recipe:</b> run <code>check_fit_against_prediction</code> or <code>density</code> right after
+the fit; <code>audit</code> after the snap and after flattening; <code>repair</code> before flattening;
+<code>pieces</code> to choose what to render and read.</li>
+</ul>
+
+<h2>7. Limits</h2>
+<ul>
+<li>Agreement with m7 is agreement with a model. The CT checks cover the control pair, three rendered PHerc. 0175A
+windings and seven PHerc. 0800 windings.</li>
+<li>The neighbour's surface is its tangent plane at the nearest node, not the exact mesh (agreement within one voxel for
+about 90&nbsp;% of nodes).</li>
+<li>The prediction pitch is a median over sampled nodes; missed sheets would lengthen it, but on the lines checked it
+equals the CT's period.</li>
+<li>The pieces mask is conservative: it drops some papyrus where the prediction has holes along the sheet.</li>
+</ul>
+
+<h2>8. Reproducing</h2>
+<pre>pip install -e .
+winding-audit density &lt;fit&gt;/meshes/fitted_&lt;tag&gt; --surface &lt;m7.zarr&gt; --z 6600 7500 --first w040 --last w115
+winding-audit audit   &lt;band&gt; --surface &lt;m7.zarr&gt; --out runs/band --voxel-um 8.64 [--subdir tifxyz/flatten.tifxyz]
+winding-audit repair  &lt;band&gt; --surface &lt;m7.zarr&gt; --out runs/band_repaired --audit --voxel-um 8.64
+winding-audit pieces  &lt;band&gt; --surface &lt;m7.zarr&gt; --out runs/band_pieces --voxel-um 8.64 --figures</pre>
+<p class="note">All result tables are in <code>docs/results/</code> of the repository; the test suite builds a synthetic
+spiral scroll with injected mergers, skips, gaps and fused prediction and checks every verdict.</p>
+
+<h2>References</h2>
+<ol class="refs">
+<li>ScrollPrize/villa: <code>volume-cartographer/scripts/spiral</code> (fit_spiral) and lasagna. github.com/ScrollPrize/villa</li>
+<li>E. Nieuwlaar, PHerc. 343 First Letters (recipe, snap_meshes.py, released windings). github.com/Nieuwlaar/pherc343-first-letters</li>
+<li>Vesuvius Challenge open data: m7 surface predictions and CT volumes. scrollprize.org/data</li>
+<li>Vesuvius Challenge, Progress Prizes and Open Problems. scrollprize.org/prizes</li>
+</ol>
+</body>
+</html>
