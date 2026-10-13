@@ -1,0 +1,11 @@
+{
+ "n": 2851904,
+ "assessed": 2842179,
+ "kept": 1398005,
+ "moved": 88322,
+ "kept_shared_run": 7441,
+ "unrepaired": 1331427,
+ "move_rejected": 16984,
+ "not_assessed": 9725,
+ "seconds": 1744.9
+}

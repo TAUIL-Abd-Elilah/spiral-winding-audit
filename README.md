@@ -3,7 +3,7 @@
 Checks the windings of a spiral fit against each other and against the surface prediction, and says where two
 windings sit on the same sheet, where a wrap was skipped, and where a node is not on a sheet at all.
 
-**Status: 0.3 (13 October 2026): audit, plus a first repair.** The audit measures, per node, how far each winding
+**Status: 0.3 (12 October 2026): audit, plus a first repair.** The audit measures, per node, how far each winding
 is from the next one's surface and from the predicted sheets. The repair moves a node that is off any sheet, or
 on a neighbouring winding's sheet, onto the sheet between its two neighbours. Numbers in this README are
 measurements on real fits and will change.
@@ -70,7 +70,7 @@ part that a re-snap can repair.
    neighbour, so two windings on one sheet are separated once. Skipped wraps are left alone: every winding after
    the skip follows it, so no node is misplaced locally; it is a topology error and stays in the audit.
 
-## Results (13 October 2026, v0.3)
+## Results (12 October 2026, v0.3)
 
 Three bands fitted with the PHerc. 343 recipe (villa `fit_spiral` at `0fb38c45`, 20k steps, snapped onto the
 published m7 prediction at level 0, then lasagna-flattened), 120 windings each, audited against the same
@@ -83,23 +83,31 @@ spacing is under 0.75 of the prediction's sheet pitch.
 | band | stage | area | off any sheet | within 0.3 pitch of the next winding | adjacent | same sheet | gap filled | wrap skipped | collapsed pairs |
 |---|---|---|---|---|---|---|---|---|---|
 | PHerc. 343, w047→w048 (Erwin Nieuwlaar, control) | flatten | 7 cm² | 28 % | 22 % | 61 % | 32 % | 4 % | 2 % | 0 of 1 |
-| PHerc. 0175A, z 6900–7900 | snap | (running) | | | | | | | |
+| PHerc. 0175A, z 6900–7900 | snap | 645 cm² | 14 % | 21 % | 71 % | 26 % | 1 % | 2 % | 42 of 119 (179 cm²) |
 | PHerc. 0175A, z 6900–7900 | flatten | 853 cm² | 15 % | 21 % | 71 % | 25 % | 1 % | 2 % | 41 of 119 (232 cm²) |
 | PHerc. 0175A, z 6900–7900 | flatten + repair | 853 cm² | 13 % | 20 % | 73 % | 24 % | 1 % | 2 % | 40 of 119 (218 cm²) |
-| PHerc. 0813, z 12200–13200 | snap | (running) | | | | | | | |
-| PHerc. 0813, z 12200–13200 | flatten | (running) | | | | | | | |
-| PHerc. 0800, z 5300–6300 | snap | (running) | | | | | | | |
-| PHerc. 0800, z 5300–6300 | flatten | (running) | | | | | | | |
+| PHerc. 0813, z 12200–13200 | flatten | 1090 cm² | 34 % | 17 % | 60 % | 27 % | 6 % | 7 % | 29 of 119 (298 cm²) |
+| PHerc. 0800, z 5300–6300 | flatten | 1037 cm² | 28 % | 24 % | 52 % | 37 % | 8 % | 3 % | 87 of 119 (722 cm²) |
 <!-- /results-table -->
 
 - **The main defect is collapsed windings: two consecutive windings on one sheet.** On PHerc. 0175A, 21 % of the
   flattened nodes are within 0.3 pitch of the next winding's surface, and 41 of 119 pairs (232 cm²) are collapsed
   over most of their area. Exact point-to-triangle distances to the neighbouring mesh confirm it (w030→w031: 55 % of
   nodes within 2 voxels; w070→w071: 2 %). Where a pair collapses, every sheet around it still holds one winding, so
-  the band has one winding more than it has sheets there: the fitted spiral slips a turn, and the slip is undone
-  elsewhere around the same turn. Erwin's winning pair has the same defect over 21.5 % of w047, mostly outside the
+  the band has more windings than sheets there (next point). Erwin's winning pair has the same defect over 21.5 % of w047, mostly outside the
   letters (14 % inside the letter area, 24 % elsewhere).
-- **15 % of the flattened nodes are on no predicted sheet.** On the control, such nodes sit in a CT trough: a render
+- **The collapse starts in the fit, and the snap makes it.** Before the snap, the PHerc. 0175A windings do not touch
+  (2.4 % of nodes within 0.3 pitch of the next winding), but the inner ones are 8–10 voxels apart against a sheet
+  pitch of 15 in the prediction: about 1.5 windings per sheet. The snap then moves every winding to its nearest
+  sheet, and pairs of windings land on the same one (21 %), next to gaps of about 17 voxels. Comparing the fit's
+  winding spacing with the prediction's sheet spacing before snapping shows where the fitted spiral has too many
+  turns.
+- **The other two bands are worse.** PHerc. 0813: 29 of 119 pairs collapsed (298 cm² of 1,090) and 34 % of nodes
+  off any sheet. PHerc. 0800: 87 of 119 pairs collapsed (722 cm² of 1,037), only 52 % adjacent wraps. Its fit is
+  too dense across the whole band, not only in the core: at four sampled windings (w020, w050, w080, w110), before
+  the snap the windings are 9.5–12 voxels apart against a predicted sheet pitch of 16.5–17.5. A winding that runs between two sheets is snapped to one or the
+  other depending on its local offset, so it can switch sheets around the turn.
+- **15 % of the flattened PHerc. 0175A nodes are on no predicted sheet.** On the control, such nodes sit in a CT trough: a render
   there samples the gap between wraps.
 - **The repair moves 3.1 % of the nodes onto a sheet between their neighbours, and the CT confirms the moves.** On
   three PHerc. 0175A windings that have 66-layer renders, the 811 moved nodes inside the renders go from a mean CT
