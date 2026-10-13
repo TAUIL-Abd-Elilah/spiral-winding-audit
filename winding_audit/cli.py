@@ -5,6 +5,7 @@
                       [--subdir tifxyz/flatten.tifxyz] [--sections z1 z2 ..] [--no-sheets] [--grid-figures]
   winding-audit repair <windings dir> --surface <prediction zarr> [--group 0] --out <dir> [--subdir ...]
                        [--node-tol 2.0] [--max-shift 1.25] [--jump 0.4] [--audit --voxel-um 8.64 --sections ..]
+                       [--ct <raw CT zarr or chunk folder>] [--ct-prominence 1.0]
   winding-audit pieces <windings dir> --surface <prediction zarr> [--group 0] --out <dir> [--subdir ...]
                        [--voxel-um 8.64] [--min-area-cm2 0.05] [--figures]
   winding-audit density <windings dir> --surface <prediction zarr> [--group 0] --z Z [--z Z2 ..]
@@ -120,6 +121,10 @@ def cmd_repair(a):
     if len(ws) < 3:
         sys.exit(f"need at least three windings in {a.windings}, found {len(ws)}")
     surface = open_surface(a.surface, a.group)
+    ct = None
+    if a.ct:
+        from .volumes import open_volume
+        ct = open_volume(a.ct, a.ct_group, like=surface)
     wdir, mdir = _ensure(a.out, "windings"), _ensure(a.out, "repair_maps")
     rows, current = [], list(ws)
     for i, w in enumerate(ws):
@@ -134,7 +139,7 @@ def cmd_repair(a):
             rows.append(json.load(open(rowf)))
             continue
         res = _retry(lambda: repair_winding(w, current[i - 1], ws[i + 1], surface, a.threshold, a.node_tol,
-                                            a.max_shift, jump_frac=a.jump))
+                                            a.max_shift, jump_frac=a.jump, ct=ct, ct_prominence=a.ct_prominence))
         current[i] = res.winding
         save_winding(res.winding, od)
         np.savez_compressed(os.path.join(mdir, f"{w.name}.npz"), shift=res.shift, status=res.status)
@@ -314,6 +319,12 @@ def main(argv=None):
     r.add_argument("--max-shift", type=float, default=1.25, help="largest move, in sheet pitches")
     r.add_argument("--jump", type=float, default=0.4,
                    help="a move larger than this (pitches) must agree with two neighbouring moves")
+    r.add_argument("--ct", help="raw CT (OME-Zarr, or a folder of <z>_<y>_<x>.bin 128^3 chunks on the prediction's "
+                                "grid): keep nodes on CT layers the prediction misses, and move stacked nodes to a "
+                                "free CT layer between their neighbours")
+    r.add_argument("--ct-group", default="0")
+    r.add_argument("--ct-prominence", type=float, default=1.0,
+                   help="a CT layer is a local maximum this many local standard deviations above its surroundings")
     r.add_argument("--audit", action="store_true", help="audit the repaired band into <out>/audit")
     r.add_argument("--voxel-um", type=float); r.add_argument("--sections", type=float, nargs="*")
     r.add_argument("--grid-figures", action="store_true")

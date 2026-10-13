@@ -1,0 +1,120 @@
+{
+ "w104": {
+  "flat_nodes": 34915,
+  "moved_flat_nodes": 5608,
+  "kept_flat_nodes": 1843,
+  "moved_to_ct_layer_vs_inner_orig": {
+   "n": 256,
+   "ncc_median": 0.323,
+   "ncc_iqr": [
+    0.216,
+    0.415
+   ],
+   "share_over_0p5": 0.133,
+   "dist_median_vox": 14.9
+  },
+  "moved_to_ct_layer_vs_outer_orig": {
+   "n": 250,
+   "ncc_median": 0.327,
+   "ncc_iqr": [
+    0.216,
+    0.455
+   ],
+   "share_over_0p5": 0.192,
+   "dist_median_vox": 13.7
+  },
+  "moved_to_ct_layer_vs_self_orig": {
+   "n": 254,
+   "ncc_median": 0.412,
+   "ncc_iqr": [
+    0.294,
+    0.575
+   ],
+   "share_over_0p5": 0.346,
+   "dist_median_vox": 11.1
+  },
+  "kept_vs_inner_orig": {
+   "n": 254,
+   "ncc_median": 0.551,
+   "ncc_iqr": [
+    0.375,
+    0.708
+   ],
+   "share_over_0p5": 0.555,
+   "dist_median_vox": 8.7
+  },
+  "kept_vs_outer_orig": {
+   "n": 250,
+   "ncc_median": 0.358,
+   "ncc_iqr": [
+    0.236,
+    0.487
+   ],
+   "share_over_0p5": 0.228,
+   "dist_median_vox": 17.9
+  },
+  "kept_vs_self_orig": {
+   "n": 253,
+   "ncc_median": 0.881,
+   "ncc_iqr": [
+    0.727,
+    0.943
+   ],
+   "share_over_0p5": 0.897,
+   "dist_median_vox": 8.4
+  },
+  "random_vs_inner": {
+   "n": 232,
+   "ncc_median": 0.305
+  }
+ },
+ "w086": {
+  "flat_nodes": 29392,
+  "moved_flat_nodes": 4277,
+  "kept_flat_nodes": 1870,
+  "moved_to_ct_layer_vs_inner_orig": {
+   "n": 256,
+   "ncc_median": 0.299,
+   "ncc_iqr": [
+    0.213,
+    0.398
+   ],
+   "share_over_0p5": 0.113,
+   "dist_median_vox": 14.9
+  },
+  "moved_to_ct_layer_vs_self_orig": {
+   "n": 261,
+   "ncc_median": 0.391,
+   "ncc_iqr": [
+    0.264,
+    0.557
+   ],
+   "share_over_0p5": 0.322,
+   "dist_median_vox": 10.7
+  },
+  "kept_vs_inner_orig": {
+   "n": 242,
+   "ncc_median": 0.374,
+   "ncc_iqr": [
+    0.251,
+    0.566
+   ],
+   "share_over_0p5": 0.318,
+   "dist_median_vox": 18.0
+  },
+  "kept_vs_self_orig": {
+   "n": 246,
+   "ncc_median": 0.9,
+   "ncc_iqr": [
+    0.796,
+    0.945
+   ],
+   "share_over_0p5": 0.902,
+   "dist_median_vox": 7.6
+  },
+  "random_vs_inner": {
+   "n": 235,
+   "ncc_median": 0.295
+  }
+ }
+}

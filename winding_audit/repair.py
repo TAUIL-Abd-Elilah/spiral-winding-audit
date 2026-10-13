@@ -23,6 +23,23 @@ one sheet are separated once, not both moved.
 
 Skipped wraps (winding k+1 two pitches out, every later winding following it) are a topology error, not a placement
 error: no node is on the wrong sheet locally, so the repair keeps them and the audit keeps reporting them.
+
+With the raw CT (``ct``), two cases the prediction cannot decide are read from the CT instead. The prediction misses
+some papyrus layers (along radial rays it has 72-89 % of the CT's bright layers on the fits measured), so:
+
+  a node off any predicted sheet that sits on a bright CT layer (a local maximum of the CT along the normal, within
+  ``node_tol`` + 1 voxels, prominence ``ct_prominence`` local standard deviations, not at a neighbour's position)
+  is kept, as ``kept_on_ct_layer``, rather than moved to a predicted sheet;
+  a node that would stay unrepaired (no free predicted sheet between its neighbours) is moved to the nearest bright
+  CT layer that lies strictly between the neighbours (at least ``ct_margin_frac`` pitches from each, and in the
+  middle ``ct_central_frac`` of the span between them), as ``moved_to_ct_layer``.
+
+A CT intensity peak is not by itself a winding: on the awarded PHerc. 343 pair (w047/w048, adjacent turns) there are
+1.3-1.6 CT peaks per turn step, so a sheet often shows as two plies. The central-span condition keeps a move away
+from a neighbour's second ply; whether a moved node then renders new papyrus has to be checked in the CT.
+
+So two windings snapped onto one predicted surface are separated when the CT shows a layer between their
+neighbours, and that layer gets rendered.
 """
 from __future__ import annotations
 
@@ -30,13 +47,18 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from scipy.ndimage import gaussian_filter1d, uniform_filter1d
+from scipy.signal import find_peaks
+
 from .sheets import prediction_pitch, sample_volume
 from .spacing import neighbour_spacing
 from .tifxyz import Winding, grid_normals  # noqa: F401  (grid_normals re-exported)
 
 R_KEPT, R_MOVED, R_UNREPAIRED, R_REJECTED, R_NOT_ASSESSED, R_SHARED = 0, 1, 2, 3, 4, 5
+R_MOVED_CT, R_KEPT_CT = 6, 7
 REPAIR_STATUS_NAMES = {R_KEPT: "kept", R_MOVED: "moved", R_SHARED: "kept_shared_run", R_UNREPAIRED: "unrepaired",
-                       R_REJECTED: "move_rejected", R_NOT_ASSESSED: "not_assessed"}
+                       R_REJECTED: "move_rejected", R_NOT_ASSESSED: "not_assessed", R_MOVED_CT: "moved_to_ct_layer",
+                       R_KEPT_CT: "kept_on_ct_layer"}
 
 
 @dataclass
@@ -72,9 +94,35 @@ def _run_id_at(runid: np.ndarray, centre_idx: np.ndarray, w: int) -> np.ndarray:
     return ids[np.arange(N), np.argmin(cost, 1)]
 
 
+def ct_layers(ct, p: np.ndarray, nv: np.ndarray, t: np.ndarray, pitch: float, prominence: float = 1.0,
+              min_sep: float = 3.0) -> list:
+    """Per line p + t * nv, the positions t of bright CT layers: local maxima of the CT smoothed over 1 voxel and
+    standardised over about two pitches, with prominence >= ``prominence`` (in local standard deviations). None for
+    a line that leaves the available CT (``ct.available``, when the source has it)."""
+    step = float(t[1] - t[0])
+    pts = (p[:, None, :] + t[None, :, None] * nv[:, None, :]).reshape(-1, 3)
+    vals = sample_volume(ct, pts).reshape(len(p), len(t)).astype(np.float64)
+    have = (ct.available(pts).reshape(len(p), len(t)).all(1) if hasattr(ct, "available")
+            else np.ones(len(p), bool))
+    sm = gaussian_filter1d(vals, 1.0 / step, axis=1)
+    win = max(5, int(round(2.0 * pitch / step)))
+    mu = uniform_filter1d(sm, win, axis=1, mode="nearest")
+    sd = np.sqrt(np.maximum(uniform_filter1d((sm - mu) ** 2, win, axis=1, mode="nearest"), 1e-6))
+    z = (sm - mu) / sd
+    out = []
+    for i in range(len(p)):
+        if not have[i]:
+            out.append(None)
+            continue
+        pk = find_peaks(z[i], prominence=prominence, distance=max(1, int(round(min_sep / step))))[0]
+        out.append(t[pk])
+    return out
+
+
 def repair_winding(a: Winding, prev: Winding, nxt: Winding, surface, threshold: int = 128, node_tol: float = 2.0,
                    max_shift_frac: float = 1.25, search_frac: float = 2.5, jump_frac: float = 0.4,
-                   step: float = 1.0, pitch: float | None = None) -> RepairResult:
+                   step: float = 1.0, pitch: float | None = None, ct=None, ct_prominence: float = 1.0,
+                   ct_margin_frac: float = 0.3, ct_central_frac: float = 0.5) -> RepairResult:
     H, W = a.xyz.shape[:2]
     if pitch is None or not np.isfinite(pitch):
         pitch = prediction_pitch(a, surface, threshold)
@@ -130,10 +178,39 @@ def repair_winding(a: Winding, prev: Winding, nxt: Winding, surface, threshold: 
     st[shared_far] = R_SHARED
     sh = np.zeros(len(p))
     max_shift = max_shift_frac * pitch
-    for i in np.nonzero(~kept & ~shared_far)[0]:
+    todo = np.nonzero(~kept & ~shared_far)[0]
+    layers = {}
+    if ct is not None and len(todo):
+        layers = dict(zip(todo.tolist(), ct_layers(ct, p[todo], nv[todo], t, pitch, ct_prominence)))
+    margin = max(node_tol + 1.0, ct_margin_frac * pitch)
+
+    def free_layers(i, central=False):
+        """Bright CT layers on node i's line strictly between its neighbours, within the largest move; with
+        ``central``, only those in the middle ``ct_central_frac`` of the span between the neighbours (a layer that
+        hugs a neighbour is more likely that neighbour's second ply than a missed winding)."""
+        c = layers.get(i)
+        if c is None or len(c) == 0:
+            return np.zeros(0)
+        keep = (c > s_prev[i] + margin) & (c < s_next[i] - margin) & (np.abs(c) <= max_shift)
+        if central:
+            mid, span = 0.5 * (s_prev[i] + s_next[i]), s_next[i] - s_prev[i]
+            keep &= np.abs(c - mid) <= 0.5 * ct_central_frac * span
+        return c[keep]
+
+    for i in todo:
+        if own[i] == 0 and layers:
+            c = free_layers(i)
+            if len(c) and np.abs(c).min() <= node_tol + 1.0:
+                st[i] = R_KEPT_CT                       # on a CT layer the prediction misses: leave it
+                continue
         ids = runid[i]
         if ids.max() == 0:
-            st[i] = R_UNREPAIRED
+            c = free_layers(i, central=True)
+            if len(c):
+                st[i] = R_MOVED_CT
+                sh[i] = c[np.argmin(np.abs(c))]
+            else:
+                st[i] = R_UNREPAIRED
             continue
         k = np.arange(1, ids.max() + 1)
         first = np.array([t[np.argmax(ids == j)] for j in k])
@@ -145,7 +222,12 @@ def repair_winding(a: Winding, prev: Winding, nxt: Winding, surface, threshold: 
         if own[i] > 0:
             cand &= k != own[i]
         if not cand.any():
-            st[i] = R_UNREPAIRED
+            c = free_layers(i, central=True)
+            if len(c):
+                st[i] = R_MOVED_CT
+                sh[i] = c[np.argmin(np.abs(c))]
+            else:
+                st[i] = R_UNREPAIRED
             continue
         j = np.argmin(np.where(cand, np.abs(centre), np.inf))
         st[i] = R_MOVED
@@ -154,7 +236,7 @@ def repair_winding(a: Winding, prev: Winding, nxt: Winding, surface, threshold: 
     status[ok] = st
     shift[ok] = sh
     jump = jump_frac * pitch
-    moved = status == R_MOVED
+    moved = (status == R_MOVED) | (status == R_MOVED_CT)
     big = moved & (np.abs(np.nan_to_num(shift)) > jump)
     if big.any():
         pad_s = np.pad(np.where(moved, shift, np.nan), 1, constant_values=np.nan)
@@ -168,7 +250,16 @@ def repair_winding(a: Winding, prev: Winding, nxt: Winding, surface, threshold: 
         reject = big & (agree < 2)
         status[reject] = R_REJECTED
         shift[reject] = 0.0
-    rc_m = np.nonzero(status == R_MOVED)
+    # each node chose its layer on its own line; a 3 x 3 median over the moved neighbours keeps a moved region from
+    # wrinkling at the grid scale (kept nodes are not mixed in, so the move itself is not shrunk)
+    moved = (status == R_MOVED) | (status == R_MOVED_CT)
+    if moved.any():
+        pad = np.pad(np.where(moved, shift, np.nan), 1, constant_values=np.nan)
+        stack = np.stack([pad[1 + dy:1 + dy + H, 1 + dx:1 + dx + W] for dy in (-1, 0, 1) for dx in (-1, 0, 1)])
+        with np.errstate(all="ignore"):
+            med = np.nanmedian(stack, axis=0)
+        shift = np.where(moved, med, shift)
+    rc_m = np.nonzero(moved)
     n_or = np.zeros_like(a.xyz)
     n_or[ok] = nv
     out.xyz[rc_m] = a.xyz[rc_m] + shift[rc_m][:, None] * n_or[rc_m]
@@ -176,13 +267,15 @@ def repair_winding(a: Winding, prev: Winding, nxt: Winding, surface, threshold: 
     stats = {"n": int(v.sum()), "assessed": int(ok.sum()), "pitch": pitch}
     for code, name in REPAIR_STATUS_NAMES.items():
         stats[name] = int((status[v] == code).sum())
-    stats["median_abs_shift_moved"] = float(np.median(np.abs(shift[status == R_MOVED]))) if stats["moved"] else 0.0
+    mv = (status == R_MOVED) | (status == R_MOVED_CT)
+    stats["median_abs_shift_moved"] = float(np.median(np.abs(shift[mv]))) if mv.any() else 0.0
     before, after = edge_stretch(a.xyz, a.grid_step), edge_stretch(out.xyz, a.grid_step)
     stats.update({f"before_{k}": x for k, x in before.items() if k != "edges"})
     stats.update({f"after_{k}": x for k, x in after.items() if k != "edges"})
     out.meta["repair"] = {"tool": "winding-audit repair", "node_tol": node_tol, "max_shift_frac": max_shift_frac,
                           "jump_frac": jump_frac, "threshold": threshold, "pitch": pitch,
-                          "moved": stats["moved"], "unrepaired": stats["unrepaired"]}
+                          "moved": stats["moved"], "unrepaired": stats["unrepaired"], "ct": ct is not None,
+                          "moved_to_ct_layer": stats["moved_to_ct_layer"], "kept_on_ct_layer": stats["kept_on_ct_layer"]}
     return RepairResult(out, shift, status, pitch, stats)
 
 

@@ -1,0 +1,102 @@
+{
+ "ct_at_nodes": {
+  "kept": [
+   103.4170755874304,
+   84776
+  ],
+  "moved_ct_old": [
+   94.54785186496173,
+   22601
+  ],
+  "moved_ct_new": [
+   123.49171245833709,
+   22202
+  ],
+  "kept_ct": [
+   115.0975766329642,
+   6231
+  ],
+  "moved_m7_old": [
+   84.18092509209988,
+   2443
+  ],
+  "moved_m7_new": [
+   104.92818819645068,
+   2423
+  ]
+ },
+ "repair_plain": {
+  "n": 1374217,
+  "assessed": 1369750,
+  "kept": 606215,
+  "moved": 28629,
+  "kept_shared_run": 1754,
+  "unrepaired": 720994,
+  "move_rejected": 12158,
+  "not_assessed": 4467,
+  "moved_to_ct_layer": 0,
+  "kept_on_ct_layer": 0,
+  "seconds": 6018.0
+ },
+ "repair_ct": {
+  "n": 1374217,
+  "assessed": 1369749,
+  "kept": 655174,
+  "moved": 19939,
+  "kept_shared_run": 1964,
+  "unrepaired": 425882,
+  "move_rejected": 44497,
+  "not_assessed": 4468,
+  "moved_to_ct_layer": 171180,
+  "kept_on_ct_layer": 51113,
+  "seconds": 2409.5
+ },
+ "gaps_input": {
+  "all_rays": {
+   "gaps": 13478,
+   "median_gap": 14.513895093134579,
+   "stacked_lt2": 0.15491912746698322,
+   "uncovered_per_gap": 0.1612998961270218,
+   "ct_peaks_per_10vox": 0.47582382074625873
+  },
+  "square_on_rays": {
+   "gaps": 5400,
+   "median_gap": 13.623869669002602,
+   "stacked_lt2": 0.1685185185185185,
+   "uncovered_per_gap": 0.11518518518518518,
+   "ct_peaks_per_10vox": 0.5133054584075172
+  }
+ },
+ "gaps_plain": {
+  "all_rays": {
+   "gaps": 13478,
+   "median_gap": 14.513895093134579,
+   "stacked_lt2": 0.15358361774744028,
+   "uncovered_per_gap": 0.15714497699955482,
+   "ct_peaks_per_10vox": 0.4759613714909545
+  },
+  "square_on_rays": {
+   "gaps": 5475,
+   "median_gap": 13.588761026851216,
+   "stacked_lt2": 0.16602739726027396,
+   "uncovered_per_gap": 0.10995433789954338,
+   "ct_peaks_per_10vox": 0.5136058591591398
+  }
+ },
+ "gaps_ct": {
+  "all_rays": {
+   "gaps": 13479,
+   "median_gap": 13.896450088888969,
+   "stacked_lt2": 0.0626901105423251,
+   "uncovered_per_gap": 0.11929668373024706,
+   "ct_peaks_per_10vox": 0.4765752086050229
+  },
+  "square_on_rays": {
+   "gaps": 5625,
+   "median_gap": 12.894949307549723,
+   "stacked_lt2": 0.06666666666666667,
+   "uncovered_per_gap": 0.07626666666666666,
+   "ct_peaks_per_10vox": 0.5134505196872371
+  }
+ }
+}

@@ -3,16 +3,18 @@
 Checks the windings of a spiral fit against each other and against the surface prediction, and says where two
 windings sit on the same sheet, where a wrap was skipped, and where a node is not on a sheet at all.
 
-**Status: 0.4.1 (13 October 2026): audit, repair, single-sheet pieces, and a density count.** The audit measures, per node, how far
+**Status: 0.5.0 (13 October 2026): audit, repair (with an optional CT-aware mode), single-sheet pieces, a density count, and raw-CT ray counts.** The audit measures, per node, how far
 each winding is from the next one's surface and from the predicted sheets. The repair moves a node that is off any
 sheet, or on a neighbouring winding's sheet, onto the sheet between its two neighbours. The pieces mark which parts
 of each winding stay on one sheet and are read only once. Numbers in this README are measurements on real fits and
 will change.
 
 **Paper:** [paper/paper.pdf](paper/paper.pdf) ("One Winding per Sheet"), built from `paper/paper.html` with
-`python paper/build.py`. **In villa:** `spiral-fitting/check_fit_against_prediction.py` (branch
-`tauil/spiral-sheet-reindex` of the author's fork) checks a fit checkpoint against the prediction in the fit's own
-spiral space.
+`python paper/build.py`. **Fit check:** `villa_scripts/check_fit_against_prediction.py` checks a `fit_spiral`
+checkpoint against the prediction in the fit's own spiral space (copy it into villa's `spiral-fitting/` to run). It
+was proposed to villa as ScrollPrize/villa#2071 and declined: the maintainers' view is that the current spiral should
+not have this failure mode. The fits measured here were made with `fit_spiral` at `0fb38c45`, the commit of the
+PHerc. 343 recipe.
 
 ## Why
 
@@ -194,6 +196,54 @@ so its "off any sheet" figure is expected to be high.
 ![Repair checked against the CT: mean depth profile of kept nodes and of moved nodes at their old and new positions](docs/pherc0175a_repair_ct.png)
 
 ![PHerc. 0175A slice z 7400, all flattened windings over the prediction, coloured by sheet verdict](docs/pherc0175a_z7400.png)
+
+## CT-aware repair (13 October 2026, v0.5)
+
+The snap of the recipe moves every node to the nearest surface of the prediction. Where the prediction has no
+surface for a layer that the CT shows (it has 81–91 % of the CT's bright layers along radial rays, Table above),
+two windings end up on one predicted surface, and a re-snap onto the prediction cannot separate them: there is no
+free predicted surface between their neighbours. `repair --ct` reads the raw CT along each node's normal instead:
+
+- a node off every predicted surface that sits on a bright CT layer (a local maximum of the CT along the normal,
+  1 local standard deviation above its surroundings, not at a neighbour's position) is kept (`kept_on_ct_layer`);
+- a node that would stay unrepaired is moved to the nearest bright CT layer strictly between its two neighbours and
+  in the middle half of the span between them (`moved_to_ct_layer`). A CT peak is not by itself a winding: a sheet
+  can show as two plies, so a layer that hugs a neighbour is not a target;
+- moves are smoothed with a 3 × 3 median over the moved neighbours, and a large move that disagrees with the moves
+  around it is undone, as in the plain repair.
+
+On the 76 snapped windings w040–w115 of a PHerc. 0175A refit (z 5900–6900), with the raw L0 CT:
+
+| | consecutive windings < 2 vox apart (180 rays, z 6460) | square-on rays only | CT layer peaks > 8 vox from both windings, per gap |
+|---|---|---|---|
+| snapped (input) | 15.5 % | 16.9 % | 0.16 |
+| repair onto the prediction only | 15.4 % | 16.6 % | 0.16 |
+| repair with the CT | 6.3 % | 6.7 % | 0.12 |
+
+12.5 % of the nodes move to a CT layer and 3.7 % are kept on one; 51 cm² of CT layer is newly
+covered over the band (largest per winding: 2.2 cm²). At the moved nodes the CT goes from a mean of 95 at the old
+position (between layers) to 123 at the new one; nodes left on the prediction read 103 (they sit about 3 voxels
+off the brightest depth, as on the awarded PHerc. 343 windings). Band totals: `docs/results/ctrepair_pherc0175a/`.
+
+![PHerc. 0175A z 6460, raw CT with the windings before (snapped onto the prediction) and after the CT-aware repair](docs/pherc0175a_ct_repair_before_after.png)
+
+The share of grid edges longer than 1.5 grid steps goes from 15.5 % to 15.8 % (the snapped input is already
+stretched); the outlines stay jagged where a moved region meets kept nodes, which flattening should even out. The
+repaired windings were then flattened and rendered (22 layers, the First Letters chain) next to the original renders
+of the same windings and their neighbours. For w104 and w086, in the moved regions the rendered texture correlates with
+the inner neighbour's render at 0.30–0.32 (median normalised cross-correlation of 41 × 41 px patches, best over
+±12 px shifts; w104 against its outer neighbour: 0.33), the same as random pairs (0.30–0.31) and far from a copy
+(0.55; nodes the repair kept correlate 0.88–0.90 with their own original render). The moved regions lie about 15
+voxels from the inner neighbour, about one layer, so they are not a ply hugging it. Against their own original render
+they read 0.39–0.41. Below, the moved region of w104 shows fibre texture where the original render of the same place
+and the inner neighbour's render have large dark areas off the papyrus.
+
+![PHerc. 0175A w104 renders: moved region after the CT-aware repair, the original render of the same place, and the inner neighbour at the matched place](docs/pherc0175a_ct_repair_renders.png)
+
+```
+winding-audit repair <band dir> --surface <m7 zarr root> --group 0 --ct <raw CT zarr, or a folder of 128^3 .bin chunks> \
+    --out runs/band_ct_repaired
+```
 
 ## Single-sheet pieces (13 October 2026, v0.4)
 

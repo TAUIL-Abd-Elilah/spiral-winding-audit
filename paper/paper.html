@@ -66,7 +66,9 @@ and mask the single-sheet surface that is read once (<code>pieces</code>).
 The same 1.5 windings per sheet appears in the fit's own spiral space, where the sheets' winding phase is nearly
 unrelated to the windings (alignment 0.11&ndash;0.15); we add this check to villa's spiral-fitting tools. Either way the
 rendered windings duplicate papyrus, and every fit should be checked, against the prediction and the raw CT, before
-rendering; whether the remedy is fewer windings or better prediction recall depends on the scroll.
+rendering. A CT-aware repair that moves stacked windings onto the bright CT layer between their neighbours takes the
+stacked share of a PHerc. 0175A band from 15.5&nbsp;% to 6.3&nbsp;% (a re-snap onto the prediction: 15.4&nbsp;%), and
+renders of the moved regions show papyrus that neither neighbour renders.
 </div>
 
 <h2>1. Problem</h2>
@@ -216,6 +218,36 @@ three keep 40&ndash;64&nbsp;% of their surroundings.</p>
 <figcaption><b>Figure 6.</b> PHerc. 0175A w111: single-sheet pieces (colours), the part that duplicates w110 (red) and
 nodes off a sheet or in pieces too small to keep (grey).</figcaption></figure>
 
+<h3>4.6 A CT-aware repair separates stacked windings</h3>
+<p>Where the prediction has no surface for a layer the CT shows, the snap leaves two windings on one predicted surface
+and a re-snap onto the prediction has nowhere to move them. <code>repair --ct</code> reads the raw CT along each node's
+normal: a node off every predicted surface that sits on a bright CT layer is kept; a node that would stay unrepaired is
+moved to the nearest bright CT layer strictly between its two neighbours and in the middle half of the span between
+them (a layer that hugs a neighbour may be that neighbour's second ply); moves are smoothed with a 3&nbsp;&times;&nbsp;3
+median over the moved neighbours, and spikes are undone as before.</p>
+<table>
+<tr><th>PHerc. 0175A, 76 snapped windings (z 6460, 180 rays)</th><th class="n">windings &lt; 2 vox apart</th><th class="n">square-on rays</th><th class="n">CT peaks &gt; 8 vox from both, per gap</th></tr>
+<tr><td>snapped onto the prediction</td><td class="n">15.5&nbsp;%</td><td class="n">16.9&nbsp;%</td><td class="n">0.16</td></tr>
+<tr><td>repair onto the prediction only</td><td class="n">15.4&nbsp;%</td><td class="n">16.6&nbsp;%</td><td class="n">0.16</td></tr>
+<tr><td>CT-aware repair</td><td class="n">6.3&nbsp;%</td><td class="n">6.7&nbsp;%</td><td class="n">0.12</td></tr>
+</table>
+<p class="note"><b>Table 5b.</b> Stacked consecutive windings before and after the repairs (awarded PHerc. 343 pair: 1.7&nbsp;%).</p>
+<p>12.5&nbsp;% of the nodes move to a CT layer and 3.7&nbsp;% are kept on one; 51&nbsp;cm&sup2; of CT layer is newly covered
+(up to 2.2&nbsp;cm&sup2; per winding). At the moved nodes the CT goes from a mean of 95 at the old position to 123 at the new
+one (nodes left on the prediction: 103). Grid edges longer than 1.5 steps go from 15.5&nbsp;% to 15.8&nbsp;%; outlines stay
+jagged where a moved region meets kept nodes (Figure 6b).</p>
+<p><b>Rendered, the moved regions are new papyrus.</b> Repaired windings were flattened and rendered with 22 layers.
+For w104 and w086, in the moved regions the rendered texture correlates with the inner neighbour's render at
+0.30&ndash;0.32 (w104 against its outer neighbour: 0.33), the level of random pairs (0.30&ndash;0.31) and far from a copy
+(0.55); kept nodes correlate 0.88&ndash;0.90 with their own original render. The moved regions lie about 15 voxels from
+the inner neighbour, about one layer, so they are not a ply of it (Figure 6c).</p>
+<figure><img src="../docs/pherc0175a_ct_repair_renders.png" alt="">
+<figcaption><b>Figure 6c.</b> PHerc. 0175A w104 renders (mean of the 4 central layers): the moved region after the
+CT-aware repair, the original render of the same place, and the inner neighbour at the matched place.</figcaption></figure>
+<figure><img src="../docs/pherc0175a_ct_repair_before_after.png" alt="">
+<figcaption><b>Figure 6b.</b> PHerc. 0175A z 6460, raw CT with the windings snapped onto the prediction (left) and after
+the CT-aware repair (right).</figcaption></figure>
+
 <h2>5. Correcting the fits</h2>
 <p>The fits have more windings than the prediction has sheets, and the nearest-sheet snap turns that into stacked
 windings. Where the CT confirms the extra windings, the fit is at fault; where the prediction misses sheets
@@ -270,11 +302,13 @@ measurements call for, not as a demonstrated result.</p>
 
 <h2>6. Integration</h2>
 <ul>
-<li><b>Standalone tools</b> (MIT, 23 tests on a synthetic scroll with injected faults):
+<li><b>Standalone tools</b> (MIT, 26 tests on a synthetic scroll with injected faults):
 <code>density</code>, <code>audit</code>, <code>repair</code>, <code>pieces</code>; tifxyz and OME-Zarr in, tifxyz,
 CSV/JSON and figures out. github.com/TAUIL-Abd-Elilah/spiral-winding-audit</li>
-<li><b>In villa:</b> <code>spiral-fitting/check_fit_against_prediction.py</code> with a regression test, on branch
-<code>tauil/spiral-sheet-reindex</code> of the author's fork, proposed to ScrollPrize/villa.</li>
+<li><b>Fit check:</b> <code>villa_scripts/check_fit_against_prediction.py</code> with a regression test (run inside villa's
+<code>spiral-fitting/</code>). Proposed as ScrollPrize/villa#2071 and declined: the maintainers' view is that the current
+spiral should not have this failure mode; the fits here were made at <code>0fb38c45</code>, the PHerc. 343 recipe's
+commit.</li>
 <li><b>Where they sit in the recipe:</b> run <code>check_fit_against_prediction</code> or <code>density</code> right after
 the fit; <code>audit</code> after the snap and after flattening; <code>repair</code> before flattening;
 <code>pieces</code> to choose what to render and read.</li>
