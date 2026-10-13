@@ -18,8 +18,8 @@ winding on the wrong sheet renders the same papyrus as its neighbour, or the gap
 then read nothing new.
 
 On our own PHerc. 0175A fit (120 windings, band z 6900–7900, 853 cm² after flattening), 21 % of the nodes lie within
-0.3 sheet pitch of the next winding's surface, and 41 of 119 winding pairs are collapsed onto one sheet over most of
-their area. 15 % of the nodes are on no predicted sheet. Erwin's winning pair shows the same defects, at similar
+0.3 sheet pitch of the next winding's surface: 45 of 119 winding pairs share a sheet on a quarter or more of their
+nodes, 21 on half or more and 6 on 70 % or more. 15 % of the nodes are on no predicted sheet. Erwin's winning pair shows the same defects, at similar
 rates, mostly outside its letters. This tool makes them visible per node, per winding and per band, repairs the part
 that a re-snap can repair, and marks the single-sheet pieces of the rest, each kept once.
 
@@ -31,7 +31,7 @@ that a re-snap can repair, and marks the single-sheet pieces of the rest, each k
    node is projected onto the tangent plane of k+1 at that node. Measuring to the nearest *node* instead misses
    windings that lie on top of each other: on a 20-voxel grid the nearest node can be 10 or more voxels to the
    side. The sheet pitch is read from the prediction itself, as the median spacing of consecutive predicted sheets
-   along the node normals, so a pair that collapses onto one sheet cannot shrink its own pitch. `merged` = closer
+   along the node normals, so a pair that shares a sheet cannot shrink its own pitch. `merged` = closer
    than 0.3 × pitch; `skipped` = farther than 1.7 × pitch. A far node whose nearest point is on the neighbour's own
    boundary is `unassessed` (the true nearest point may be outside the neighbour's coverage).
 2. **Sheets between.** First each end is placed: the exact distance from the node, and from its nearest point on
@@ -44,10 +44,11 @@ that a re-snap can repair, and marks the single-sheet pieces of the rest, each k
    sheet, a fit error) when the neighbour is closer than half a pitch and `fused` (the prediction fills the gap
    between two wraps, a model error in a compressed region) when it is about a pitch away. This separates fit
    errors from prediction errors, which the spacing check alone cannot do.
-3. **Collapsed pairs.** Each pair's pitch is compared with the local pitch, the mean pair pitch over three pairs
-   either side. Two windings that sit on one sheet all the way round make their own median spacing small, so
-   against their own pitch they look normal; against the local pitch the pair shows as `collapsed` (ratio below
-   0.75), usually next to a `stretched` pair (above 1.25).
+3. **Close pairs.** Each pair's median spacing is compared with the prediction's sheet pitch. A ratio below 0.75
+   is a close pair (`pairs_collapsed` in `summary.json`): on a fit before the snap, the windings are denser than
+   the sheets; after the snap, the pair shares a sheet over part of the turn (how much is the fraction of nodes
+   within 0.3 pitch). Without a prediction, the ratio is taken against the mean pair spacing of three pairs either
+   side, and a pair above 1.25 is `stretched`.
 4. **Report.** `audit.csv` / `audit.json` with one row per winding pair (pitch, local pitch and their ratio, spacing fractions merged / skipped /
    unassessed, fraction of nodes off any sheet and within 1 / 2 / 3 voxels of one, and among nodes with both ends on
    a sheet the fractions adjacent / merged / fused / skipped, plus area in cm² when `--voxel-um` is given),
@@ -74,7 +75,7 @@ that a re-snap can repair, and marks the single-sheet pieces of the rest, each k
 6. **Pieces** (`winding-audit pieces`). What a re-snap cannot fix can still be marked. For each winding, the nodes
    on a predicted sheet are joined across grid edges that stay on one sheet (the step along the normal is under
    0.35 pitch and the points at 1/4, 1/2 and 3/4 of the edge are on a sheet). Pieces are cut at the edge of a
-   collapsed region, because a winding can only reach another sheet by crossing a gap or by landing on a
+   shared-sheet region (nodes within 0.3 pitch of a neighbour), because a winding can only reach another sheet by crossing a gap or by landing on a
    neighbour's sheet. Going from the inside out, nodes that lie on the inner neighbour's kept surface are dropped
    as duplicates, so a shared sheet is kept once, in the inner winding. Pieces under 0.05 cm² are dropped. The
    output is a mask per winding (a masked tifxyz and a piece-label image), so an existing render can be read
@@ -86,13 +87,13 @@ Three bands fitted with the PHerc. 343 recipe (villa `fit_spiral` at `0fb38c45`,
 published m7 prediction at level 0, then lasagna-flattened), 120 windings each, audited against the same
 prediction after the snap and after the flatten (the flatten output is what gets rendered). Erwin Nieuwlaar's
 released pair is the control. "Off any sheet" and "within 0.3 pitch" are fractions of all assessed nodes; the four
-sheet verdicts are fractions of the nodes with both ends on a predicted sheet. A pair is collapsed when its median
-spacing is under 0.75 of the prediction's sheet pitch; on the raw fit, before the snap, that means the two windings
-are too close, not yet on one sheet (the snap then puts them on one). Nodes of the raw fit are not on sheets yet,
+sheet verdicts are fractions of the nodes with both ends on a predicted sheet. A close pair has a median
+spacing under 0.75 of the prediction's sheet pitch; on the raw fit, before the snap, that means the two windings
+are too close, not yet on one sheet (the snap then puts them on one over part of the turn). Nodes of the raw fit are not on sheets yet,
 so its "off any sheet" figure is expected to be high.
 
 <!-- results-table -->
-| band | stage | area | off any sheet | within 0.3 pitch of the next winding | adjacent | same sheet | gap filled | wrap skipped | collapsed pairs |
+| band | stage | area | off any sheet | within 0.3 pitch of the next winding | adjacent | same sheet | gap filled | wrap skipped | close pairs (< 0.75 pitch) |
 |---|---|---|---|---|---|---|---|---|---|
 | PHerc. 343, w047→w048 (Erwin Nieuwlaar, control) | flatten | 7 cm² | 28 % | 22 % | 61 % | 32 % | 4 % | 2 % | 0 of 1 |
 | PHerc. 0175A, z 6900–7900 | fit (before snap) | 645 cm² | 46 % | 3 % | 87 % | 6 % | 4 % | 3 % | 50 of 119 (198 cm²) |
@@ -105,13 +106,13 @@ so its "off any sheet" figure is expected to be high.
 | PHerc. 0800, z 5300–6300 | flatten | 1037 cm² | 28 % | 24 % | 52 % | 37 % | 8 % | 3 % | 87 of 119 (722 cm²) |
 <!-- /results-table -->
 
-- **The main defect is collapsed windings: two consecutive windings on one sheet.** On PHerc. 0175A, 21 % of the
-  flattened nodes are within 0.3 pitch of the next winding's surface, and 41 of 119 pairs (232 cm²) are collapsed
-  over most of their area. Exact point-to-triangle distances to the neighbouring mesh confirm it (w030→w031: 55 % of
-  nodes within 2 voxels; w070→w071: 2 %). Where a pair collapses, every sheet around it still holds one winding, so
-  the band has more windings than sheets there (next point). Erwin's winning pair has the same defect over 21.5 % of w047, mostly outside the
+- **The main defect is consecutive windings that share a sheet over part of the turn.** On PHerc. 0175A, 21 % of
+  the flattened nodes are within 0.3 pitch of the next winding's surface. The overlap is partial: 44 of 119 pairs
+  share a sheet on a quarter or more of their nodes, 21 on half or more, 6 on 70 % or more. Exact point-to-triangle distances to the neighbouring mesh confirm it (w030→w031: 55 % of
+  nodes within 2 voxels; w070→w071: 2 %). Where two windings share a sheet, every sheet around them still holds a
+  winding, so the band has more windings than sheets there (next points). Erwin's winning pair has the same defect over 21.5 % of w047, mostly outside the
   letters (14 % inside the letter area, 24 % elsewhere).
-- **Collapsed windings render the same papyrus.** On two consecutive PHerc. 0800 windings (w095 and w096 of a band
+- **Windings that share a sheet render the same papyrus.** On two consecutive PHerc. 0800 windings (w095 and w096 of a band
   at z 6300–7800, rendered from the flatten output), the rendered surface patches at matched nodes correlate at a
   median of 0.55 where the audit puts the windings within 0.3 pitch, against 0.28 for adjacent wraps and 0.31 for
   random pairs. The audit's "same sheet" is the CT's "same papyrus, read twice".
@@ -134,14 +135,15 @@ so its "off any sheet" figure is expected to be high.
   `model_initial_dr_per_winding` = 16 by default; in the PHerc. 0800 z 6300–7800 checkpoint it ended at 16.8. The
   pitch stays where it starts, so the starting value should be the scroll's own radial sheet spacing, and the
   density count is the check (it should read 1.0).
-- **The collapse starts in the fit, and the snap makes it.** Before the snap, the PHerc. 0175A windings do not touch
+- **The shared sheets start in the fit, and the snap makes them.** Before the snap, the PHerc. 0175A windings do not touch
   (2.4 % of nodes within 0.3 pitch of the next winding), but the inner ones are 8–10 voxels apart against a sheet
   pitch of 15 in the prediction: about 1.5 windings per sheet. The snap then moves every winding to its nearest
   sheet, and pairs of windings land on the same one (21 %), next to gaps of about 17 voxels. Comparing the fit's
   winding spacing with the prediction's sheet spacing before snapping shows where the fitted spiral has too many
   turns.
-- **The other two bands are worse.** PHerc. 0813: 29 of 119 pairs collapsed (298 cm² of 1,090) and 34 % of nodes
-  off any sheet. PHerc. 0800: 87 of 119 pairs collapsed (722 cm² of 1,037), only 52 % adjacent wraps. Its fit is
+- **The other two bands.** PHerc. 0813: 17 % of nodes within 0.3 pitch of the next winding, 29 close pairs, and
+  34 % of nodes off any sheet. PHerc. 0800: 24 % within 0.3 pitch, 87 of 119 close pairs, 55 pairs sharing a sheet
+  on a quarter or more of their nodes (2 on half or more), and only 52 % adjacent wraps. Its fit is
   too dense across the whole band, not only in the core: at four sampled windings (w020, w050, w080, w110), before
   the snap the windings are 9.5–12 voxels apart against a predicted sheet pitch of 16.5–17.5. A winding that runs between two sheets is snapped to one or the
   other depending on its local offset, so it can switch sheets around the turn.
@@ -150,15 +152,15 @@ so its "off any sheet" figure is expected to be high.
 - **The repair moves 3.1 % of the nodes onto a sheet between their neighbours, and the CT confirms the moves.** On
   three PHerc. 0175A windings that have 66-layer renders, the 811 moved nodes inside the renders go from a mean CT
   value of 83 at their old position to 104 at the new one (nodes kept on their own sheet: 99). Over the band, nodes
-  off any sheet drop from 15.2 % to 12.7 % and adjacent wraps rise from 71.4 % to 73.2 %. Collapsed windings stay:
-  with both neighbours on the sheets around it, a winding has no free sheet to move to. They need a re-fit, not a
+  off any sheet drop from 15.2 % to 12.7 % and adjacent wraps rise from 71.4 % to 73.2 %. Windings that share a
+  sheet stay: with both neighbours on the sheets around it, a winding has no free sheet to move to. They need a re-fit, not a
   re-snap.
 
 ![PHerc. 0175A slice z 7400: windings w106–w115 over the prediction; w110 and w111 run on one sheet](docs/pherc0175a_w110_section.png)
 
 ![PHerc. 0175A w110 → w111 on the winding grid: spacing flags, distance in pitches, sheet verdict, node-to-sheet distance](docs/pherc0175a_w110_flat.png)
 
-![PHerc. 0800 w095 and w096: texture correlation of matched rendered patches, collapsed against adjacent and random node pairs](docs/pherc0800_duplicate_texture.png)
+![PHerc. 0800 w095 and w096: texture correlation of matched rendered patches, node pairs within 0.3 pitch against adjacent and random pairs](docs/pherc0800_duplicate_texture.png)
 
 ![Repair checked against the CT: mean depth profile of kept nodes and of moved nodes at their old and new positions](docs/pherc0175a_repair_ct.png)
 
@@ -266,11 +268,11 @@ pytest tests
   wraps.
 - The pitch comes from the prediction's sheet spacing (median over 2,000 sampled nodes per winding). Missed sheets
   in the prediction make it slightly long (on PHerc. 0175A, 14–17 voxels against 12–13 for clean winding pairs).
-  Without a prediction (`--no-sheets`) the pair's own median spacing is used and collapsed pairs are judged against
+  Without a prediction (`--no-sheets`) the pair's own median spacing is used and close pairs are judged against
   the mean of the neighbouring pairs.
 - The neighbour's surface is its tangent plane at the nearest node, not the exact mesh. Checked against exact
   point-to-triangle distances on PHerc. 0175A: within 1 voxel for about 90 % of nodes.
-- Collapsed windings are reported, not repaired: separating them means moving every later winding by one sheet in
+- Windings that share a sheet are reported, not repaired: separating them means moving every later winding by one sheet in
   that sector, which is a re-fit.
 - Agreement with the surface prediction is agreement with a model, not with the papyrus. The CT checks in this
   README cover the control pair, three rendered PHerc. 0175A windings and two rendered PHerc. 0800 windings.
