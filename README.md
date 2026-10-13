@@ -121,10 +121,26 @@ so its "off any sheet" figure is expected to be high.
   at z 6300–7800, rendered from the flatten output), the rendered surface patches at matched nodes correlate at a
   median of 0.55 where the audit puts the windings within 0.3 pitch, against 0.28 for adjacent wraps and 0.31 for
   random pairs. The audit's "same sheet" is the CT's "same papyrus, read twice".
-- **The prediction does not miss sheets; the fit has too many windings.** On three rendered PHerc. 0175A windings
-  the CT's own sheet period along the node normals (first autocorrelation peak of the depth profiles) is 15–17
-  voxels, the same as the prediction's pitch (14–15), while the windings there are 11–13 voxels apart.
-- **Counted along radial rays, the fits have 1.2–1.6 windings per sheet.** `winding-audit density` casts rays from
+- **Against the raw CT the excess is smaller: part of it is sheets the prediction misses (correction, 13 October).**
+  Along node normals on three rendered PHerc. 0175A windings, the CT's dominant period (first autocorrelation
+  peak of the depth profiles) is 15–17 voxels, close to the prediction's pitch (14–15). But counting bright CT
+  layers along radial rays in the raw L0 CT (intensity peaks at prominence 0.5 / 1 / 1.5 local standard deviations,
+  `tools/ct_layers_along_rays.py`) gives fewer windings per layer than per predicted sheet:
+
+  | fit, slice | windings per predicted sheet | windings per CT layer | predicted / CT layers |
+  |---|---|---|---|
+  | PHerc. 0800 z 5300–6300, z 5820 (24 rays where the CT was cached) | 1.55 | 0.90 / 1.12 / 1.33 | 0.72 |
+  | PHerc. 0175A 190-winding fit z 5900–6900, z 6460 (36 rays, w040–w115) | 1.47 | 1.09 / 1.31 / 1.54 | 0.89 |
+
+  On PHerc. 0800 the prediction has about three quarters of the CT's bright layers, so most of its 1.5 windings per
+  predicted sheet are sheets the prediction misses, not extra windings; on PHerc. 0175A it is some of each. A peak
+  count does not by itself establish windings (villa `SCROLL_ANATOMY.md`: a sheet's two layers can show as two
+  lines, two windings can touch), so these are bounds, not a count. What holds either way: after the snap, pairs of
+  windings sit on one predicted surface and render the same papyrus, and a larger pitch is not the general fix.
+  The unrolled strip below shows both cases: windings running through empty gaps, and bright layers with no
+  prediction on them.
+
+- **Counted along radial rays, the fits have 1.2–1.6 windings per predicted sheet.** `winding-audit density` casts rays from
   the centre of a slice and counts, between the crossings of w040 and w115, the windings and the predicted sheets
   they pass. Before any snap:
 
@@ -135,11 +151,11 @@ so its "off any sheet" figure is expected to be high.
   | PHerc. 0175A, z 6900–7900 | 7100, 7700 | 1.39, 1.39 | 18.3, 18.6 vox |
   | PHerc. 0813, z 12200–13200 | 12400, 13000 | 1.23, 1.20 | 18.0, 18.1 vox |
 
-  Every fit advances 17–19 voxels of radius per winding whatever the scroll, while the sheets are 22–29 voxels
-  apart along the same rays. `fit_spiral` learns its spiral pitch (`dr_per_winding`) from a starting value,
+  Every fit advances 17–19 voxels of radius per winding whatever the scroll, while the predicted sheets are 22–29
+  voxels apart along the same rays. `fit_spiral` learns its spiral pitch (`dr_per_winding`) from a starting value,
   `model_initial_dr_per_winding` = 16 by default; in the PHerc. 0800 z 6300–7800 checkpoint it ended at 16.8. The
-  pitch stays where it starts, so the starting value should be the scroll's own radial sheet spacing, and the
-  density count is the check (it should read 1.0).
+  pitch stays where it starts, so the starting value matters. It should be the scroll's own sheet spacing measured
+  in the raw CT, not in the prediction (previous point): on PHerc. 0800 the prediction's spacing overstates it.
 - **The shared sheets start in the fit, and the snap makes them.** Before the snap, the PHerc. 0175A windings do not touch
   (2.4 % of nodes within 0.3 pitch of the next winding), but the inner ones are 8–10 voxels apart against a sheet
   pitch of 15 in the prediction: about 1.5 windings per sheet. The snap then moves every winding to its nearest
@@ -160,6 +176,8 @@ so its "off any sheet" figure is expected to be high.
   off any sheet drop from 15.2 % to 12.7 % and adjacent wraps rise from 71.4 % to 73.2 %. Windings that share a
   sheet stay: with both neighbours on the sheets around it, a winding has no free sheet to move to. They need a re-fit, not a
   re-snap.
+
+![PHerc. 0175A z 6460, raw L0 CT unrolled (angle 100–140°, radius 760–1060) with the prediction (cyan) and the raw fitted windings (orange)](docs/pherc0175a_ct_strip_z6460.png)
 
 ![PHerc. 0175A slice z 7400: windings w106–w115 over the prediction; w110 and w111 run on one sheet](docs/pherc0175a_w110_section.png)
 

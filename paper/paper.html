@@ -54,16 +54,18 @@ onto the m7 surface prediction, lasagna flattening) is now the standard way to s
 windings are accepted by eye. We measure them per node. On four bands of three scrolls (PHerc. 0175A, 0813, 0800;
 120 windings each), 17&ndash;24&nbsp;% of the flattened nodes lie within 0.3 sheet pitch of the next winding, and
 15&ndash;34&nbsp;% lie on no predicted sheet. Two independent CT checks confirm it: node pairs that the audit puts on one
-sheet render the same papyrus texture (correlation 0.55 against 0.28 for adjacent wraps), and the CT's own sheet
-period equals the prediction's. Counting along radial rays, the fits place 1.2&ndash;1.6 windings on each sheet:
-<code>fit_spiral</code>'s spiral pitch stays near its starting value of 16 voxels while the sheets are 22&ndash;29 voxels
-apart radially, and the snap then pairs windings on shared sheets. The winning PHerc. 343 pair shows the same on
+sheet render the same papyrus texture (correlation 0.55 against 0.28 for adjacent wraps). Counting along radial
+rays, the fits place 1.2&ndash;1.6 windings on each predicted sheet: <code>fit_spiral</code>'s spiral pitch stays near its
+starting value of 16 voxels while the predicted sheets are 22&ndash;29 voxels apart radially, and the snap then pairs
+windings on shared sheets. Against bright layers counted in the raw CT the excess is smaller (0.9&ndash;1.3 windings
+per CT layer on PHerc. 0800, 1.1&ndash;1.5 on PHerc. 0175A): part of it is sheets the prediction misses. The winning PHerc. 343 pair shows the same on
 21&nbsp;% of a winding, mostly outside its letters. We release CPU tools that measure this before any rendering
 (<code>density</code>, <code>audit</code>), repair what a re-snap can repair (<code>repair</code>, checked against the CT),
 and mask the single-sheet surface that is read once (<code>pieces</code>).
 The same 1.5 windings per sheet appears in the fit's own spiral space, where the sheets' winding phase is nearly
-unrelated to the windings (alignment 0.11&ndash;0.15); we add this check to villa's spiral-fitting tools. A re-snap
-cannot fix extra windings; the fit must start from the roll's own pitch and be checked before rendering.
+unrelated to the windings (alignment 0.11&ndash;0.15); we add this check to villa's spiral-fitting tools. Either way the
+rendered windings duplicate papyrus, and every fit should be checked, against the prediction and the raw CT, before
+rendering; whether the remedy is fewer windings or better prediction recall depends on the scroll.
 </div>
 
 <h2>1. Problem</h2>
@@ -145,26 +147,43 @@ is partial: on PHerc. 0175A, 44 of 119 pairs share a sheet on a quarter or more 
 (dark blue: on top of each other); sheet verdict; node-to-sheet distance. The first 40&nbsp;% of the turn shares w111's
 sheet.</figcaption></figure>
 
-<h3>4.2 The CT agrees</h3>
+<h3>4.2 What the CT says</h3>
 <p><b>Off-sheet nodes are gaps.</b> On the PHerc. 343 control, nodes on a predicted-sheet voxel have a sharp papyrus
 peak 2.5 voxels outward, inside the ink window; nodes with no predicted sheet within 6 voxels sit in a CT trough about
 20 grey levels darker (Figure 3).</p>
 <p><b>Shared sheets are the same papyrus.</b> On two consecutive PHerc. 0800 windings (w095, w096; Figure 4), the
 rendered surface patches at matched nodes correlate at a median of 0.55 where the audit puts the windings within 0.3
 pitch, against 0.28 for adjacent wraps and 0.31 for random pairs (w096/w097: 0.60).</p>
-<p><b>The prediction does not miss sheets.</b> The CT's sheet period along node normals is 15&ndash;17 voxels on three
-PHerc. 0175A windings and 17.1&ndash;17.7 on six PHerc. 0800 windings, equal to the prediction's run spacing on the same
-lines (14&ndash;15 and 16.2&ndash;17.5), while the fitted windings there are 9.5&ndash;13 voxels apart.</p>
+<p><b>The prediction misses some sheets (correction, 13 October).</b> Along node normals the CT's dominant period is
+15&ndash;17 voxels on three PHerc. 0175A windings and 17.1&ndash;17.7 on six PHerc. 0800 windings, close to the
+prediction's run spacing on the same lines (14&ndash;15 and 16.2&ndash;17.5), while the fitted windings there are
+9.5&ndash;13 voxels apart. A first version of this paper concluded from this that the prediction does not miss sheets.
+Counting bright layers along radial rays in the raw L0 CT (intensity peaks at prominence 0.5 / 1 / 1.5 local standard
+deviations) does not support that:</p>
+<table>
+<tr><th>fit, slice</th><th class="n">windings per predicted sheet</th><th class="n">windings per CT layer</th><th class="n">predicted / CT layers</th></tr>
+<tr><td>PHerc. 0800 z 5300&ndash;6300, z 5820 (24 rays)</td><td class="n">1.55</td><td class="n">0.90 / 1.12 / 1.33</td><td class="n">0.72</td></tr>
+<tr><td>PHerc. 0175A 190 windings z 5900&ndash;6900, z 6460 (36 rays)</td><td class="n">1.47</td><td class="n">1.09 / 1.31 / 1.54</td><td class="n">0.89</td></tr>
+</table>
+<p class="note"><b>Table 3b.</b> Raw-CT layer counts along radial rays, w040&ndash;w115. A peak count is a bound, not a
+count of windings: a sheet's two layers can show as two lines and two windings can touch (villa
+<code>SCROLL_ANATOMY.md</code>).</p>
+<p>On PHerc. 0800 the prediction has about three quarters of the CT's bright layers, so most of the 1.5 windings per
+predicted sheet are sheets it misses; on PHerc. 0175A it is some of each. Figure 3b shows both: windings running
+through empty gaps, and bright layers with no prediction on them.</p>
+<figure><img src="../docs/pherc0175a_ct_strip_z6460.png" alt="">
+<figcaption><b>Figure 3b.</b> PHerc. 0175A z 6460, raw L0 CT unrolled (angle 100&ndash;140&deg;, radius 760&ndash;1060),
+alone and with the prediction (cyan) and the raw fitted windings (orange).</figcaption></figure>
 <figure><img src="../docs/pherc0343_control.png" alt="">
 <figcaption><b>Figure 3.</b> PHerc. 343 control (E. Nieuwlaar's w047/w048). Left: mean CT depth profile by distance to
 the prediction. Right: verdicts inside the letter area of w047 and on the rest of the winding.</figcaption></figure>
 <figure class="half"><img src="../docs/pherc0800_duplicate_texture.png" alt="">
 <figcaption><b>Figure 4.</b> Texture correlation of the rendered surfaces of w095 and w096 at matched nodes.</figcaption></figure>
 
-<h3>4.3 Root cause: the fits have too many windings</h3>
+<h3>4.3 Root cause: more windings than predicted sheets</h3>
 <!-- DENSITY-TABLE -->
-<p>Every fit advances 17&ndash;19 voxels of radius per winding, whatever the scroll, while the sheets are 22&ndash;29
-voxels apart along the same rays. <code>fit_spiral</code> learns its spiral pitch from <code>model_initial_dr_per_winding</code>
+<p>Every fit advances 17&ndash;19 voxels of radius per winding, whatever the scroll, while the predicted sheets are
+22&ndash;29 voxels apart along the same rays (the CT's bright layers are closer, Table 3b). <code>fit_spiral</code> learns its spiral pitch from <code>model_initial_dr_per_winding</code>
 (default 16); in the PHerc. 0800 z 6300&ndash;7800 checkpoint it ended at 16.8, and in a 190-winding refit of PHerc.
 0175A it read 15.6 after 3,000 iterations. Before the snap the windings do not touch (2.4&nbsp;% of PHerc. 0175A nodes
 within 0.3 pitch), but they are 0.6&ndash;0.7 of a sheet pitch apart; the nearest-sheet snap then puts pairs of windings
@@ -189,8 +208,9 @@ three keep 40&ndash;64&nbsp;% of their surroundings.</p>
 nodes off a sheet or in pieces too small to keep (grey).</figcaption></figure>
 
 <h2>5. Correcting the fits</h2>
-<p>The audit, the density count and the CT checks all point at the fit, not the snap or the prediction. Three
-things follow.</p>
+<p>The fits have more windings than the prediction has sheets, and the nearest-sheet snap turns that into stacked
+windings. Where the CT confirms the extra windings, the fit is at fault; where the prediction misses sheets
+(most of PHerc. 0800, Table 3b), the snap and the prediction are. Three things follow.</p>
 <h3>5.1 A check of the fit itself, before any export</h3>
 <p>A fit is a transform from scan space to a spiral space in which winding <i>k</i> is the curve
 r&nbsp;=&nbsp;dr&nbsp;(<i>k</i>&nbsp;+&nbsp;&phi;/2&pi;). Mapping the prediction's sheet voxels of a few slices through the
@@ -216,9 +236,9 @@ fit's spiral space (red lines: windings) and, per sector, the alignment and the 
 0.07 (0.01&ndash;0.05 in single slices).</figcaption></figure>
 
 <h3>5.2 What a re-snap can and cannot do</h3>
-<p>A snap moves nodes onto existing sheets. A fit with 1.5 windings per sheet has half again as many windings as the
-roll has turns in that range, so after any snap a third of its windings must share a sheet with a neighbour or lie in
-a gap; the
+<p>A snap moves nodes onto existing sheets. A fit with 1.5 windings per predicted sheet has half again as many
+windings as the prediction has sheets in that range, so after a snap onto the prediction a third of its windings must
+share a sheet with a neighbour or lie in a gap; the
 neighbour-bounded repair (Section 4.4) fixes the nodes that have a free sheet to go to, and the pieces mask (4.5) marks
 the rest. Raising the outer winding index does not help by itself: in these configurations the outer-shell loss is off,
 the index only extends how far the fit reaches, and the 190-winding refit, at iteration 6,000, still reads 1.4 inside and 1.2 for the
@@ -226,10 +246,11 @@ new outer windings (Table 4).</p>
 
 <h3>5.3 What should change in the fit</h3>
 <ol>
-<li><b>Start from the roll's own pitch.</b> <code>fit_spiral</code> moves its pitch little from the starting value
-(16&nbsp;&rarr;&nbsp;16.8 voxels). The starting value should be the radial sheet spacing of the scroll, which the
-density count gives directly (radius per winding &times; windings per sheet): about 25&ndash;29 voxels on PHerc. 0800,
-25&ndash;26 on PHerc. 0175A and 22 on PHerc. 0813.</li>
+<li><b>Start from the roll's own pitch, measured in the CT.</b> <code>fit_spiral</code> moves its pitch little from the
+starting value (16&nbsp;&rarr;&nbsp;16.8 voxels), so the starting value should be the scroll's sheet spacing. The
+prediction's spacing (25&ndash;29 voxels on PHerc. 0800) overstates it where the prediction misses sheets; the raw CT's
+bright layers are about 18&ndash;23 voxels apart along rays there. A snap that never puts two windings on one predicted
+surface, and better prediction recall, address the rest.</li>
 <li><b>Use the alignment as a loss.</b> The phase alignment of the prediction's sheet voxels is differentiable in the
 transform and the pitch; a term rewarding whole winding numbers would pull windings onto sheets and push empty windings
 out of the gaps.</li>
@@ -257,8 +278,8 @@ the fit; <code>audit</code> after the snap and after flattening; <code>repair</c
 windings and seven PHerc. 0800 windings.</li>
 <li>The neighbour's surface is its tangent plane at the nearest node, not the exact mesh (agreement within one voxel for
 about 90&nbsp;% of nodes).</li>
-<li>The prediction pitch is a median over sampled nodes; missed sheets would lengthen it, but on the lines checked it
-equals the CT's period.</li>
+<li>The prediction pitch is a median over sampled nodes; missed sheets lengthen it. Along radial rays the prediction has
+72&ndash;89&nbsp;% of the CT's bright layers (Table 3b), so pitch-relative numbers overstate the extra windings.</li>
 <li>The pieces mask is conservative: it drops some papyrus where the prediction has holes along the sheet.</li>
 </ul>
 
