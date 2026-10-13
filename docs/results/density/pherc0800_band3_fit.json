@@ -1,0 +1,26 @@
+[
+ {
+  "z": 6600,
+  "rays": 180,
+  "windings_crossed": 76.0,
+  "sheets_crossed": 49.5,
+  "windings_per_sheet": 1.536139455782313,
+  "windings_per_sheet_p25": 1.4150943396226414,
+  "windings_per_sheet_p75": 1.6666666666666667,
+  "radius_per_winding": 17.517806405827862,
+  "first": "w040_cwb3",
+  "last": "w115_cwb3"
+ },
+ {
+  "z": 7500,
+  "rays": 180,
+  "windings_crossed": 76.0,
+  "sheets_crossed": 50.0,
+  "windings_per_sheet": 1.5153061224489797,
+  "windings_per_sheet_p25": 1.3392857142857142,
+  "windings_per_sheet_p75": 1.7857142857142858,
+  "radius_per_winding": 18.9888195818152,
+  "first": "w040_cwb3",
+  "last": "w115_cwb3"
+ }
+]

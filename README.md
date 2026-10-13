@@ -3,7 +3,7 @@
 Checks the windings of a spiral fit against each other and against the surface prediction, and says where two
 windings sit on the same sheet, where a wrap was skipped, and where a node is not on a sheet at all.
 
-**Status: 0.4 (13 October 2026): audit, repair, and single-sheet pieces.** The audit measures, per node, how far
+**Status: 0.4.1 (13 October 2026): audit, repair, single-sheet pieces, and a density count.** The audit measures, per node, how far
 each winding is from the next one's surface and from the predicted sheets. The repair moves a node that is off any
 sheet, or on a neighbouring winding's sheet, onto the sheet between its two neighbours. The pieces mark which parts
 of each winding stay on one sheet and are read only once. Numbers in this README are measurements on real fits and
@@ -118,6 +118,22 @@ so its "off any sheet" figure is expected to be high.
 - **The prediction does not miss sheets; the fit has too many windings.** On three rendered PHerc. 0175A windings
   the CT's own sheet period along the node normals (first autocorrelation peak of the depth profiles) is 15–17
   voxels, the same as the prediction's pitch (14–15), while the windings there are 11–13 voxels apart.
+- **Counted along radial rays, the fits have 1.2–1.6 windings per sheet.** `winding-audit density` casts rays from
+  the centre of a slice and counts, between the crossings of w040 and w115, the windings and the predicted sheets
+  they pass. Before any snap:
+
+  | fit (w040 to w115) | slices | windings per predicted sheet | radius per winding |
+  |---|---|---|---|
+  | PHerc. 0800, z 6300–7800 | 6600, 7500 | 1.54, 1.52 | 17.5, 19.0 vox |
+  | PHerc. 0800, z 5300–6300 | 5500, 6100 | 1.60, 1.47 | 17.0, 17.1 vox |
+  | PHerc. 0175A, z 6900–7900 | 7100, 7700 | 1.39, 1.39 | 18.3, 18.6 vox |
+  | PHerc. 0813, z 12200–13200 | 12400, 13000 | 1.23, 1.20 | 18.0, 18.1 vox |
+
+  Every fit advances 17–19 voxels of radius per winding whatever the scroll, while the sheets are 22–27 voxels
+  apart along the same rays. `fit_spiral` learns its spiral pitch (`dr_per_winding`) from a starting value,
+  `model_initial_dr_per_winding` = 16 by default; in the PHerc. 0800 z 6300–7800 checkpoint it ended at 16.8. The
+  pitch stays where it starts, so the starting value should be the scroll's own radial sheet spacing, and the
+  density count is the check (it should read 1.0).
 - **The collapse starts in the fit, and the snap makes it.** Before the snap, the PHerc. 0175A windings do not touch
   (2.4 % of nodes within 0.3 pitch of the next winding), but the inner ones are 8–10 voxels apart against a sheet
   pitch of 15 in the prediction: about 1.5 windings per sheet. The snap then moves every winding to its nearest
@@ -213,6 +229,12 @@ winding-audit audit <dir with w000_<tag>/ ... tifxyz folders> --surface <m7 pred
 winding-audit repair <band dir> --surface <m7 zarr root> --group 0 --out runs/pherc0175a_band1_repaired \
     --audit --voxel-um 8.64
 # repaired tifxyz in <out>/windings, per-node shift/status maps, repair.csv, and the audit of the result in <out>/audit
+```
+
+```
+winding-audit density <fit dir: meshes/fitted_<tag>> --surface <m7 zarr root> --group 0 --z 6600 7500 \
+    --first w040 --last w115
+# windings per predicted sheet along radial rays; 1.0 = one winding per sheet
 ```
 
 Run the audit on the fit output too, before the snap (`meshes/fitted_<tag>` of a `fit_spiral` run): there the

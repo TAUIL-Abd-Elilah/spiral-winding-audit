@@ -7,6 +7,8 @@
                        [--node-tol 2.0] [--max-shift 1.25] [--jump 0.4] [--audit --voxel-um 8.64 --sections ..]
   winding-audit pieces <windings dir> --surface <prediction zarr> [--group 0] --out <dir> [--subdir ...]
                        [--voxel-um 8.64] [--min-area-cm2 0.05] [--figures]
+  winding-audit density <windings dir> --surface <prediction zarr> [--group 0] --z Z [--z Z2 ..]
+                        [--first w040] [--last w115] [--subdir ...]
   winding-audit synthetic <out dir> [--merge W T0 T1] [--skip W T0 T1] [--gap W T0 T1]
 """
 from __future__ import annotations
@@ -248,6 +250,31 @@ def _pieces_figure(w, res, out_png):
     plt.close(fig)
 
 
+def cmd_density(a):
+    """Windings per predicted sheet along radial rays, in one or more slices."""
+    from .density import windings_per_sheet
+
+    ws = list_windings(a.windings, subdir=a.subdir)
+    names = [w.name for w in ws]
+    pick = lambda tag, default: next((i for i, n in enumerate(names) if n.startswith(tag)), default) if tag else default
+    first, last = pick(a.first, min(10, len(ws) - 2)), pick(a.last, len(ws) - 1)
+    surface = open_surface(a.surface, a.group)
+    out = []
+    for z in a.z:
+        r = windings_per_sheet(ws, surface, int(z), first, last, n_rays=a.rays, threshold=a.threshold)
+        out.append(r)
+        if r.get("rays"):
+            print(f"z {r['z']}: {r['rays']} rays, {r['first']} to {r['last']}: {r['windings_crossed']:.0f} windings, "
+                  f"{r['sheets_crossed']:.0f} predicted sheets -> {r['windings_per_sheet']:.2f} windings per sheet "
+                  f"(IQR {r['windings_per_sheet_p25']:.2f}-{r['windings_per_sheet_p75']:.2f}); "
+                  f"{r['radius_per_winding']:.1f} voxels of radius per winding", flush=True)
+        else:
+            print(f"z {int(z)}: no usable rays", flush=True)
+    if a.out:
+        os.makedirs(os.path.dirname(a.out) or ".", exist_ok=True)
+        json.dump(out, open(a.out, "w"), indent=1)
+
+
 def cmd_synthetic(a):
     from . import synthetic as syn
     vol, centre = syn.make_volume(n_sheets=a.sheets, pitch=a.pitch)
@@ -300,6 +327,14 @@ def main(argv=None):
     q.add_argument("--min-nodes", type=int, default=50, help="smallest piece kept without --voxel-um")
     q.add_argument("--figures", action="store_true", help="one PNG per winding with the pieces")
     q.set_defaults(func=cmd_pieces)
+    e = sub.add_parser("density", help="windings per predicted sheet along radial rays in a slice")
+    e.add_argument("windings"); e.add_argument("--surface", required=True); e.add_argument("--group", default="0")
+    e.add_argument("--subdir", default=""); e.add_argument("--z", type=float, nargs="+", required=True)
+    e.add_argument("--first", help="name prefix of the inner winding of the count (default: the 11th)")
+    e.add_argument("--last", help="name prefix of the outer winding of the count (default: the last)")
+    e.add_argument("--rays", type=int, default=180); e.add_argument("--threshold", type=int, default=128)
+    e.add_argument("--out", help="write the result as JSON")
+    e.set_defaults(func=cmd_density)
     s = sub.add_parser("synthetic", help="write a synthetic spiral scroll with optional faults")
     s.add_argument("out"); s.add_argument("--sheets", type=int, default=6); s.add_argument("--pitch", type=float, default=10.0)
     s.add_argument("--merge", nargs=3, action="append", metavar=("W", "T0", "T1"))

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "winding-audit"
-version = "0.4.0"
+version = "0.4.1"
 description = "Check the windings of a spiral fit against each other and the surface prediction: mergers, skipped wraps, nodes off the sheet."
 readme = "README.md"
 license = {text = "MIT"}
