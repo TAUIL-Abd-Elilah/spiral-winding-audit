@@ -1,4 +1,4 @@
-# PHerc0800 z 5300-6300 fit (cwb2Cr), z 5820, w040-w115; rays cut to the longest stretch with cached L0 CT (run stopped by a memory error after 24 of 72 rays)
+# PHerc0800 z 5300-6300 fit, z 5820, w040-w115; rays cut to the longest stretch with cached L0 CT (run stopped by a memory error after 24 of 72 rays)
 theta_deg,windings,prediction_runs,ct_peaks_p0.5,ct_peaks_p1.0,ct_peaks_p1.5
 60,27,13,25,21,18
 65,26,18,25,18,17

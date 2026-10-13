@@ -163,7 +163,7 @@ deviations) does not support that:</p>
 <table>
 <tr><th>fit, slice</th><th class="n">windings per predicted sheet</th><th class="n">windings per CT layer</th><th class="n">predicted / CT layers</th></tr>
 <tr><td>PHerc. 0800 z 5300&ndash;6300, z 5820 (24 rays)</td><td class="n">1.55</td><td class="n">0.90 / 1.12 / 1.33</td><td class="n">0.72</td></tr>
-<tr><td>PHerc. 0175A 190 windings z 5900&ndash;6900, z 6460 (36 rays)</td><td class="n">1.47</td><td class="n">1.09 / 1.31 / 1.54</td><td class="n">0.89</td></tr>
+<tr><td>PHerc. 0175A z 5900&ndash;6900 refit, z 6460 (36 rays)</td><td class="n">1.47</td><td class="n">1.09 / 1.31 / 1.54</td><td class="n">0.89</td></tr>
 </table>
 <p class="note"><b>Table 3b.</b> Raw-CT layer counts along radial rays, w040&ndash;w115. A peak count is a bound, not a
 count of windings: a sheet's two layers can show as two lines and two windings can touch (villa
@@ -184,8 +184,8 @@ the prediction. Right: verdicts inside the letter area of w047 and on the rest o
 <!-- DENSITY-TABLE -->
 <p>Every fit advances 17&ndash;19 voxels of radius per winding, whatever the scroll, while the predicted sheets are
 22&ndash;29 voxels apart along the same rays (the CT's bright layers are closer, Table 3b). <code>fit_spiral</code> learns its spiral pitch from <code>model_initial_dr_per_winding</code>
-(default 16); in the PHerc. 0800 z 6300&ndash;7800 checkpoint it ended at 16.8, and in a 190-winding refit of PHerc.
-0175A it read 15.6 after 3,000 iterations. Before the snap the windings do not touch (2.4&nbsp;% of PHerc. 0175A nodes
+(default 16); in the PHerc. 0800 z 6300&ndash;7800 checkpoint it ended at 16.8, and in a refit of PHerc.
+0175A with a raised winding count it read 15.6 after 3,000 iterations. Before the snap the windings do not touch (2.4&nbsp;% of PHerc. 0175A nodes
 within 0.3 pitch), but they are 0.6&ndash;0.7 of a sheet pitch apart; the nearest-sheet snap then puts pairs of windings
 on one sheet over part of the turn (21&nbsp;%) and leaves others to switch sheets around it. Raising the outer winding
 index only extends how far the fit reaches at the same pitch (the outer-shell loss is off in these configurations).</p>
@@ -224,8 +224,7 @@ CPU in seconds per slice.</p>
 <tr><td>PHerc. 0800 z 6300&ndash;7800, 20k steps</td><td>z 6600</td><td class="n">1.53</td><td class="n">0.14</td><td class="n">73&nbsp;%</td></tr>
 <tr><td></td><td>z 7000</td><td class="n">1.52</td><td class="n">0.15</td><td class="n">71&nbsp;%</td></tr>
 <tr><td></td><td>z 7500</td><td class="n">1.54</td><td class="n">0.11</td><td class="n">74&nbsp;%</td></tr>
-<tr><td>PHerc. 0175A z 5900&ndash;6900, 190 windings, iteration 6,000</td><td>z 6200, 6600</td><td class="n">1.42&ndash;1.44</td><td class="n">0.02&ndash;0.05</td><td class="n">74&ndash;75&nbsp;%</td></tr>
-<tr><td>&nbsp;&nbsp;same fit, new outer windings w130&ndash;w185</td><td>z 6200, 6600</td><td class="n">1.17&ndash;1.18</td><td class="n">0.01&ndash;0.02</td><td class="n">81&ndash;82&nbsp;%</td></tr>
+<tr><td>PHerc. 0175A z 5900&ndash;6900, raised winding count, iteration 6,000</td><td>z 6200, 6600</td><td class="n">1.42&ndash;1.44</td><td class="n">0.02&ndash;0.05</td><td class="n">74&ndash;75&nbsp;%</td></tr>
 </table>
 <p class="note"><b>Table 4.</b> Spiral-space check of two fits. The PHerc. 0800 value agrees with the independent
 count along radial rays in the slice (1.52&ndash;1.54, Table 2).</p>
@@ -241,8 +240,8 @@ windings as the prediction has sheets in that range, so after a snap onto the pr
 share a sheet with a neighbour or lie in a gap; the
 neighbour-bounded repair (Section 4.4) fixes the nodes that have a free sheet to go to, and the pieces mask (4.5) marks
 the rest. Raising the outer winding index does not help by itself: in these configurations the outer-shell loss is off,
-the index only extends how far the fit reaches, and the 190-winding refit, at iteration 6,000, still reads 1.4 inside and 1.2 for the
-new outer windings (Table 4).</p>
+the index only extends how far the fit reaches, and a refit with a raised count still reads 1.4 windings per predicted
+sheet (Table 4).</p>
 
 <h3>5.3 What should change in the fit</h3>
 <ol>

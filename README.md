@@ -130,7 +130,7 @@ so its "off any sheet" figure is expected to be high.
   | fit, slice | windings per predicted sheet | windings per CT layer | predicted / CT layers |
   |---|---|---|---|
   | PHerc. 0800 z 5300–6300, z 5820 (24 rays where the CT was cached) | 1.55 | 0.90 / 1.12 / 1.33 | 0.72 |
-  | PHerc. 0175A 190-winding fit z 5900–6900, z 6460 (36 rays, w040–w115) | 1.47 | 1.09 / 1.31 / 1.54 | 0.89 |
+  | PHerc. 0175A z 5900–6900 refit, z 6460 (36 rays, w040–w115) | 1.47 | 1.09 / 1.31 / 1.54 | 0.89 |
 
   On PHerc. 0800 the prediction has about three quarters of the CT's bright layers, so most of its 1.5 windings per
   predicted sheet are sheets the prediction misses, not extra windings; on PHerc. 0175A it is some of each. A peak
