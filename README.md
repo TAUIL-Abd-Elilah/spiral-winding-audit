@@ -121,24 +121,30 @@ so its "off any sheet" figure is expected to be high.
   at z 6300–7800, rendered from the flatten output), the rendered surface patches at matched nodes correlate at a
   median of 0.55 where the audit puts the windings within 0.3 pitch, against 0.28 for adjacent wraps and 0.31 for
   random pairs. The audit's "same sheet" is the CT's "same papyrus, read twice".
-- **Against the raw CT the excess is smaller: part of it is sheets the prediction misses (correction, 13 October).**
+- **Against the raw CT the excess is smaller: much of it is sheets the prediction misses (correction, 13 October).**
   Along node normals on three rendered PHerc. 0175A windings, the CT's dominant period (first autocorrelation
   peak of the depth profiles) is 15–17 voxels, close to the prediction's pitch (14–15). But counting bright CT
   layers along radial rays in the raw L0 CT (intensity peaks at prominence 0.5 / 1 / 1.5 local standard deviations,
-  `tools/ct_layers_along_rays.py`) gives fewer windings per layer than per predicted sheet:
+  brighter than the air between layers; `tools/ct_layers_along_rays.py`) gives fewer windings per layer than per
+  predicted sheet. The same counter on the awarded PHerc. 343 pair calibrates it, and the share of consecutive
+  snapped windings within 2 voxels of each other along the rays (`tools/ct_pair_gaps.py`) does not depend on it:
 
-  | fit, slice | windings per predicted sheet | windings per CT layer | predicted / CT layers |
-  |---|---|---|---|
-  | PHerc. 0800 z 5300–6300, z 5820 (24 rays where the CT was cached) | 1.55 | 0.90 / 1.12 / 1.33 | 0.72 |
-  | PHerc. 0175A z 5900–6900 refit, z 6460 (36 rays, w040–w115) | 1.47 | 1.09 / 1.31 / 1.54 | 0.89 |
+  | fit, slice | windings per predicted sheet | windings per CT layer | predicted / CT layers (middle) | consecutive windings < 2 vox apart |
+  |---|---|---|---|---|
+  | PHerc. 0800 z 5300–6300, z 5820 (62 rays where the CT was cached) | 1.61 | 1.00 / 1.20 / 1.49 | 0.81 | 17 % |
+  | PHerc. 0175A z 5900–6900 refit, z 6460 (36 rays, w040–w115) | 1.47 | 1.13 / 1.36 / 1.55 | 0.91 | 15 % |
+  | PHerc. 0175A z 6900–7900 fit, z 6990 (180 rays) | | | | 15 % |
+  | awarded PHerc. 343 pair w047/w048, 4 slices (303 gaps) | | 0.82 CT layers per turn step | | 1.7 % |
 
-  On PHerc. 0800 the prediction has about three quarters of the CT's bright layers, so most of its 1.5 windings per
-  predicted sheet are sheets the prediction misses, not extra windings; on PHerc. 0175A it is some of each. A peak
-  count does not by itself establish windings (villa `SCROLL_ANATOMY.md`: a sheet's two layers can show as two
-  lines, two windings can touch), so these are bounds, not a count. What holds either way: after the snap, pairs of
-  windings sit on one predicted surface and render the same papyrus, and a larger pitch is not the general fix.
-  The unrolled strip below shows both cases: windings running through empty gaps, and bright layers with no
-  prediction on them.
+  On the awarded pair the counter finds 0.8 CT layers per turn step (a peak count does not by itself establish
+  windings: villa `SCROLL_ANATOMY.md`); scaled by that, our fits are at about 1.0–1.1 windings per layer against
+  1.5–1.6 per predicted sheet, so much of the excess over the prediction is sheets it misses (it has 81–91 % of the
+  CT's layers). What holds however layers are counted: after the snap, 15–17 % of consecutive windings sit within
+  2 voxels of each other, ten times the awarded pair's rate, and render the same papyrus; and a larger pitch is not
+  the general fix. The unrolled strip below shows windings running through empty gaps and bright layers with no
+  prediction on them. The share of CT layers with no winding nearby is not a usable measure on its own: between the
+  awarded pair's windings, which are about 23 voxels apart, a third of the gaps hold a CT peak more than 8 voxels from
+  both.
 
 - **Counted along radial rays, the fits have 1.2–1.6 windings per predicted sheet.** `winding-audit density` casts rays from
   the centre of a slice and counts, between the crossings of w040 and w115, the windings and the predicted sheets

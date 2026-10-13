@@ -1,0 +1,1827 @@
+{
+ "summary": {
+  "scroll": "PHerc0800",
+  "z": 5820.0,
+  "tag": "fit",
+  "first": 40,
+  "last": 115,
+  "rays": 62,
+  "windings_per_m7": 1.6111111111111112,
+  "windings_per_ct_spec": 1.4731175182253256,
+  "windings_per_ct_peaks": {
+   "0.5": 1.0,
+   "1.0": 1.200501253132832,
+   "1.5": 1.4891304347826086
+  },
+  "ct_period_spec": 27.960014809329877,
+  "m7_spacing": 33.23214285714286,
+  "winding_spacing": 21.59967320261438,
+  "m7_runs_with_0_1_2plus": [
+   508,
+   448,
+   44
+  ],
+  "ct_peaks_outside_m7": 723,
+  "ct_peaks_total_p1": 1277
+ },
+ "rays": [
+  {
+   "theta_deg": 10.0,
+   "r0": 1194.1082978832749,
+   "r1": 1549.1082978832749,
+   "length": 355.5,
+   "windings": 16,
+   "m7_runs": 13,
+   "m7_run_width_med": 7.5,
+   "ct_period_spec": 24.41209025117071,
+   "ct_period_ac": 24.5,
+   "ct_peaks": {
+    "0.5": 21,
+    "1.0": 15,
+    "1.5": 13
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    5,
+    8,
+    0
+   ],
+   "ct_peaks_outside_m7": 7,
+   "windings_per_m7": 1.25,
+   "windings_per_ct_spec": 1.0987157356363753,
+   "windings_per_ct_peaks": {
+    "0.5": 0.7619047619047619,
+    "1.0": 1.0666666666666667,
+    "1.5": 1.2307692307692308
+   }
+  },
+  {
+   "theta_deg": 14.999999999999998,
+   "r0": 1217.2972016580695,
+   "r1": 1583.7972016580695,
+   "length": 367.0,
+   "windings": 18,
+   "m7_runs": 14,
+   "m7_run_width_med": 6.25,
+   "ct_period_spec": 28.904710535778495,
+   "ct_period_ac": 11.5,
+   "ct_peaks": {
+    "0.5": 24,
+    "1.0": 20,
+    "1.5": 16
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    5,
+    7,
+    2
+   ],
+   "ct_peaks_outside_m7": 7,
+   "windings_per_m7": 1.3076923076923077,
+   "windings_per_ct_spec": 1.4176697265504439,
+   "windings_per_ct_peaks": {
+    "0.5": 0.75,
+    "1.0": 0.9,
+    "1.5": 1.125
+   }
+  },
+  {
+   "theta_deg": 20.0,
+   "r0": 1251.616365863388,
+   "r1": 1639.116365863388,
+   "length": 388.0,
+   "windings": 18,
+   "m7_runs": 17,
+   "m7_run_width_med": 5.5,
+   "ct_period_spec": 21.557894736842105,
+   "ct_period_ac": 14.5,
+   "ct_peaks": {
+    "0.5": 28,
+    "1.0": 23,
+    "1.5": 18
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    8,
+    8,
+    1
+   ],
+   "ct_peaks_outside_m7": 13,
+   "windings_per_m7": 1.0625,
+   "windings_per_ct_spec": 1.0001085187194791,
+   "windings_per_ct_peaks": {
+    "0.5": 0.6428571428571429,
+    "1.0": 0.782608695652174,
+    "1.5": 1.0
+   }
+  },
+  {
+   "theta_deg": 25.0,
+   "r0": 1298.2466242285477,
+   "r1": 1718.7466242285477,
+   "length": 421.0,
+   "windings": 16,
+   "m7_runs": 18,
+   "m7_run_width_med": 6.75,
+   "ct_period_spec": 29.681159420289855,
+   "ct_period_ac": 32.5,
+   "ct_peaks": {
+    "0.5": 23,
+    "1.0": 19,
+    "1.5": 17
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    8,
+    8,
+    2
+   ],
+   "ct_peaks_outside_m7": 7,
+   "windings_per_m7": 0.8823529411764706,
+   "windings_per_ct_spec": 1.1280250611036524,
+   "windings_per_ct_peaks": {
+    "0.5": 0.6956521739130435,
+    "1.0": 0.8421052631578947,
+    "1.5": 0.9411764705882353
+   }
+  },
+  {
+   "theta_deg": 29.999999999999996,
+   "r0": 1358.9778249905978,
+   "r1": 1797.9778249905978,
+   "length": 439.5,
+   "windings": 16,
+   "m7_runs": 14,
+   "m7_run_width_med": 6.5,
+   "ct_period_spec": 37.236363636363635,
+   "ct_period_ac": 34.0,
+   "ct_peaks": {
+    "0.5": 19,
+    "1.0": 16,
+    "1.5": 14
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    7,
+    5,
+    2
+   ],
+   "ct_peaks_outside_m7": 7,
+   "windings_per_m7": 1.1538461538461537,
+   "windings_per_ct_spec": 1.3555900299927603,
+   "windings_per_ct_peaks": {
+    "0.5": 0.8421052631578947,
+    "1.0": 1.0,
+    "1.5": 1.1428571428571428
+   }
+  },
+  {
+   "theta_deg": 35.0,
+   "r0": 1436.763864241057,
+   "r1": 2057.263864241057,
+   "length": 621.0,
+   "windings": 17,
+   "m7_runs": 11,
+   "m7_run_width_med": 8.5,
+   "ct_period_spec": 35.94627594627595,
+   "ct_period_ac": 41.5,
+   "ct_peaks": {
+    "0.5": 32,
+    "1.0": 22,
+    "1.5": 20
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    6,
+    2,
+    3
+   ],
+   "ct_peaks_outside_m7": 12,
+   "windings_per_m7": 1.6,
+   "windings_per_ct_spec": 0.984036539592095,
+   "windings_per_ct_peaks": {
+    "0.5": 0.53125,
+    "1.0": 0.7727272727272727,
+    "1.5": 0.85
+   }
+  },
+  {
+   "theta_deg": 40.0,
+   "r0": 1536.7916958960286,
+   "r1": 2142.2916958960286,
+   "length": 606.0,
+   "windings": 22,
+   "m7_runs": 15,
+   "m7_run_width_med": 8.5,
+   "ct_period_spec": 24.21477256920295,
+   "ct_period_ac": 23.0,
+   "ct_peaks": {
+    "0.5": 35,
+    "1.0": 31,
+    "1.5": 28
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    6,
+    6,
+    3
+   ],
+   "ct_peaks_outside_m7": 18,
+   "windings_per_m7": 1.5,
+   "windings_per_ct_spec": 0.8790841526773348,
+   "windings_per_ct_peaks": {
+    "0.5": 0.6285714285714286,
+    "1.0": 0.7096774193548387,
+    "1.5": 0.7857142857142857
+   }
+  },
+  {
+   "theta_deg": 45.0,
+   "r0": 1664.8139777812212,
+   "r1": 2151.313977781221,
+   "length": 487.0,
+   "windings": 30,
+   "m7_runs": 19,
+   "m7_run_width_med": 10.0,
+   "ct_period_spec": 29.591683991683993,
+   "ct_period_ac": 22.5,
+   "ct_peaks": {
+    "0.5": 29,
+    "1.0": 21,
+    "1.5": 19
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    12,
+    6,
+    1
+   ],
+   "ct_peaks_outside_m7": 13,
+   "windings_per_m7": 1.6111111111111112,
+   "windings_per_ct_spec": 1.8228963444569193,
+   "windings_per_ct_peaks": {
+    "0.5": 1.0344827586206897,
+    "1.0": 1.4285714285714286,
+    "1.5": 1.5789473684210527
+   }
+  },
+  {
+   "theta_deg": 50.0,
+   "r0": 1706.133063666168,
+   "r1": 2200.133063666168,
+   "length": 494.5,
+   "windings": 31,
+   "m7_runs": 11,
+   "m7_run_width_med": 8.0,
+   "ct_period_spec": 25.75900621118012,
+   "ct_period_ac": 14.0,
+   "ct_peaks": {
+    "0.5": 23,
+    "1.0": 21,
+    "1.5": 18
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    7,
+    4,
+    0
+   ],
+   "ct_peaks_outside_m7": 17,
+   "windings_per_m7": 3.0,
+   "windings_per_ct_spec": 1.6148214207210996,
+   "windings_per_ct_peaks": {
+    "0.5": 1.3478260869565217,
+    "1.0": 1.4761904761904763,
+    "1.5": 1.7222222222222223
+   }
+  },
+  {
+   "theta_deg": 55.0,
+   "r0": 1829.8902509693633,
+   "r1": 2288.3902509693635,
+   "length": 459.0,
+   "windings": 29,
+   "m7_runs": 14,
+   "m7_run_width_med": 7.75,
+   "ct_period_spec": 27.721236509968904,
+   "ct_period_ac": 24.5,
+   "ct_peaks": {
+    "0.5": 23,
+    "1.0": 20,
+    "1.5": 17
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    5,
+    8,
+    1
+   ],
+   "ct_peaks_outside_m7": 9,
+   "windings_per_m7": 2.1538461538461537,
+   "windings_per_ct_spec": 1.7514506727431336,
+   "windings_per_ct_peaks": {
+    "0.5": 1.2608695652173914,
+    "1.0": 1.45,
+    "1.5": 1.7058823529411764
+   }
+  },
+  {
+   "theta_deg": 59.99999999999999,
+   "r0": 1952.1762429186658,
+   "r1": 2358.1762429186656,
+   "length": 406.5,
+   "windings": 27,
+   "m7_runs": 13,
+   "m7_run_width_med": 10.5,
+   "ct_period_spec": 33.57377049180328,
+   "ct_period_ac": 10.0,
+   "ct_peaks": {
+    "0.5": 21,
+    "1.0": 18,
+    "1.5": 16
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    5,
+    6,
+    2
+   ],
+   "ct_peaks_outside_m7": 8,
+   "windings_per_m7": 2.1666666666666665,
+   "windings_per_ct_spec": 2.2299921359869335,
+   "windings_per_ct_peaks": {
+    "0.5": 1.2857142857142858,
+    "1.0": 1.5,
+    "1.5": 1.6875
+   }
+  },
+  {
+   "theta_deg": 65.0,
+   "r0": 2006.0639401347212,
+   "r1": 2414.563940134721,
+   "length": 409.0,
+   "windings": 26,
+   "m7_runs": 18,
+   "m7_run_width_med": 7.5,
+   "ct_period_spec": 23.272727272727273,
+   "ct_period_ac": 23.5,
+   "ct_peaks": {
+    "0.5": 24,
+    "1.0": 18,
+    "1.5": 17
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    9,
+    9,
+    0
+   ],
+   "ct_peaks_outside_m7": 9,
+   "windings_per_m7": 1.4705882352941178,
+   "windings_per_ct_spec": 1.479439875527895,
+   "windings_per_ct_peaks": {
+    "0.5": 1.0833333333333333,
+    "1.0": 1.4444444444444444,
+    "1.5": 1.5294117647058822
+   }
+  },
+  {
+   "theta_deg": 70.0,
+   "r0": 2070.9748227039963,
+   "r1": 2422.9748227039963,
+   "length": 352.5,
+   "windings": 16,
+   "m7_runs": 9,
+   "m7_run_width_med": 5.5,
+   "ct_period_spec": 36.57142857142857,
+   "ct_period_ac": 25.5,
+   "ct_peaks": {
+    "0.5": 16,
+    "1.0": 14,
+    "1.5": 13
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    4,
+    4,
+    1
+   ],
+   "ct_peaks_outside_m7": 8,
+   "windings_per_m7": 1.875,
+   "windings_per_ct_spec": 1.6599797365754811,
+   "windings_per_ct_peaks": {
+    "0.5": 1.0,
+    "1.0": 1.1428571428571428,
+    "1.5": 1.2307692307692308
+   }
+  },
+  {
+   "theta_deg": 80.0,
+   "r0": 821.1908665079368,
+   "r1": 1324.1908665079368,
+   "length": 503.5,
+   "windings": 20,
+   "m7_runs": 13,
+   "m7_run_width_med": 14.5,
+   "ct_period_spec": 28.655968688845398,
+   "ct_period_ac": 30.5,
+   "ct_peaks": {
+    "0.5": 25,
+    "1.0": 20,
+    "1.5": 17
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    5,
+    8,
+    0
+   ],
+   "ct_peaks_outside_m7": 12,
+   "windings_per_m7": 1.5833333333333333,
+   "windings_per_ct_spec": 1.1382708515926672,
+   "windings_per_ct_peaks": {
+    "0.5": 0.8,
+    "1.0": 1.0,
+    "1.5": 1.1764705882352942
+   }
+  },
+  {
+   "theta_deg": 84.99999999999999,
+   "r0": 1695.5793984093425,
+   "r1": 2456.5793984093425,
+   "length": 761.5,
+   "windings": 42,
+   "m7_runs": 26,
+   "m7_run_width_med": 7.0,
+   "ct_period_spec": 29.257142857142856,
+   "ct_period_ac": 28.5,
+   "ct_peaks": {
+    "0.5": 40,
+    "1.0": 32,
+    "1.5": 27
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    15,
+    11,
+    0
+   ],
+   "ct_peaks_outside_m7": 21,
+   "windings_per_m7": 1.64,
+   "windings_per_ct_spec": 1.6136572554169402,
+   "windings_per_ct_peaks": {
+    "0.5": 1.05,
+    "1.0": 1.3125,
+    "1.5": 1.5555555555555556
+   }
+  },
+  {
+   "theta_deg": 90.0,
+   "r0": 1689.066822389186,
+   "r1": 2570.066822389186,
+   "length": 881.5,
+   "windings": 36,
+   "m7_runs": 24,
+   "m7_run_width_med": 9.5,
+   "ct_period_spec": 33.58279569892473,
+   "ct_period_ac": 34.0,
+   "ct_peaks": {
+    "0.5": 40,
+    "1.0": 32,
+    "1.5": 26
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    10,
+    12,
+    2
+   ],
+   "ct_peaks_outside_m7": 15,
+   "windings_per_m7": 1.5217391304347827,
+   "windings_per_ct_spec": 1.371503851572649,
+   "windings_per_ct_peaks": {
+    "0.5": 0.9,
+    "1.0": 1.125,
+    "1.5": 1.3846153846153846
+   }
+  },
+  {
+   "theta_deg": 95.0,
+   "r0": 1695.841923178272,
+   "r1": 2340.341923178272,
+   "length": 645.0,
+   "windings": 28,
+   "m7_runs": 16,
+   "m7_run_width_med": 11.25,
+   "ct_period_spec": 30.11764705882353,
+   "ct_period_ac": 28.5,
+   "ct_peaks": {
+    "0.5": 28,
+    "1.0": 26,
+    "1.5": 23
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    5,
+    10,
+    1
+   ],
+   "ct_peaks_outside_m7": 14,
+   "windings_per_m7": 1.8,
+   "windings_per_ct_spec": 1.3074327405380757,
+   "windings_per_ct_peaks": {
+    "0.5": 1.0,
+    "1.0": 1.0769230769230769,
+    "1.5": 1.2173913043478262
+   }
+  },
+  {
+   "theta_deg": 100.0,
+   "r0": 1715.4006958902105,
+   "r1": 2177.9006958902105,
+   "length": 463.0,
+   "windings": 18,
+   "m7_runs": 14,
+   "m7_run_width_med": 9.5,
+   "ct_period_spec": 38.655270655270655,
+   "ct_period_ac": 42.5,
+   "ct_peaks": {
+    "0.5": 21,
+    "1.0": 16,
+    "1.5": 12
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    7,
+    7,
+    0
+   ],
+   "ct_peaks_outside_m7": 9,
+   "windings_per_m7": 1.3076923076923077,
+   "windings_per_ct_spec": 1.5027966993409758,
+   "windings_per_ct_peaks": {
+    "0.5": 0.8571428571428571,
+    "1.0": 1.125,
+    "1.5": 1.5
+   }
+  },
+  {
+   "theta_deg": 105.0,
+   "r0": 1484.4072526846974,
+   "r1": 2015.9072526846974,
+   "length": 532.0,
+   "windings": 28,
+   "m7_runs": 22,
+   "m7_run_width_med": 5.25,
+   "ct_period_spec": 28.054794520547944,
+   "ct_period_ac": 24.0,
+   "ct_peaks": {
+    "0.5": 31,
+    "1.0": 26,
+    "1.5": 23
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    12,
+    10,
+    0
+   ],
+   "ct_peaks_outside_m7": 16,
+   "windings_per_m7": 1.2857142857142858,
+   "windings_per_ct_spec": 1.476568132660418,
+   "windings_per_ct_peaks": {
+    "0.5": 0.9032258064516129,
+    "1.0": 1.0769230769230769,
+    "1.5": 1.2173913043478262
+   }
+  },
+  {
+   "theta_deg": 110.0,
+   "r0": 1526.1872374564332,
+   "r1": 1940.6872374564332,
+   "length": 415.0,
+   "windings": 23,
+   "m7_runs": 21,
+   "m7_run_width_med": 4.5,
+   "ct_period_spec": 22.505494505494507,
+   "ct_period_ac": 11.0,
+   "ct_peaks": {
+    "0.5": 27,
+    "1.0": 24,
+    "1.5": 23
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    8,
+    13,
+    0
+   ],
+   "ct_peaks_outside_m7": 11,
+   "windings_per_m7": 1.1,
+   "windings_per_ct_spec": 1.247292466569575,
+   "windings_per_ct_peaks": {
+    "0.5": 0.8518518518518519,
+    "1.0": 0.9583333333333334,
+    "1.5": 1.0
+   }
+  },
+  {
+   "theta_deg": 124.99999999999999,
+   "r0": 1595.0490776360757,
+   "r1": 2029.0490776360757,
+   "length": 434.5,
+   "windings": 25,
+   "m7_runs": 19,
+   "m7_run_width_med": 5.0,
+   "ct_period_spec": 26.94736842105263,
+   "ct_period_ac": 24.0,
+   "ct_peaks": {
+    "0.5": 22,
+    "1.0": 21,
+    "1.5": 17
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    12,
+    7,
+    0
+   ],
+   "ct_peaks_outside_m7": 14,
+   "windings_per_m7": 1.3333333333333333,
+   "windings_per_ct_spec": 1.5504814971836958,
+   "windings_per_ct_peaks": {
+    "0.5": 1.1363636363636365,
+    "1.0": 1.1904761904761905,
+    "1.5": 1.4705882352941178
+   }
+  },
+  {
+   "theta_deg": 130.0,
+   "r0": 1705.7798551365252,
+   "r1": 2150.779855136525,
+   "length": 445.5,
+   "windings": 20,
+   "m7_runs": 16,
+   "m7_run_width_med": 5.0,
+   "ct_period_spec": 20.277227722772277,
+   "ct_period_ac": 26.5,
+   "ct_peaks": {
+    "0.5": 25,
+    "1.0": 23,
+    "1.5": 19
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    6,
+    10,
+    0
+   ],
+   "ct_peaks_outside_m7": 13,
+   "windings_per_m7": 1.2666666666666666,
+   "windings_per_ct_spec": 0.910313253547577,
+   "windings_per_ct_peaks": {
+    "0.5": 0.8,
+    "1.0": 0.8695652173913043,
+    "1.5": 1.0526315789473684
+   }
+  },
+  {
+   "theta_deg": 135.0,
+   "r0": 1600.117219565821,
+   "r1": 2136.617219565821,
+   "length": 537.0,
+   "windings": 27,
+   "m7_runs": 23,
+   "m7_run_width_med": 4.5,
+   "ct_period_spec": 24.674698795180724,
+   "ct_period_ac": 26.0,
+   "ct_peaks": {
+    "0.5": 27,
+    "1.0": 22,
+    "1.5": 21
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    18,
+    5,
+    0
+   ],
+   "ct_peaks_outside_m7": 17,
+   "windings_per_m7": 1.1818181818181819,
+   "windings_per_ct_spec": 1.2406273137241703,
+   "windings_per_ct_peaks": {
+    "0.5": 1.0,
+    "1.0": 1.2272727272727273,
+    "1.5": 1.2857142857142858
+   }
+  },
+  {
+   "theta_deg": 140.0,
+   "r0": 1476.554916004,
+   "r1": 1991.054916004,
+   "length": 515.0,
+   "windings": 27,
+   "m7_runs": 15,
+   "m7_run_width_med": 11.5,
+   "ct_period_spec": 30.567164179104477,
+   "ct_period_ac": 26.0,
+   "ct_peaks": {
+    "0.5": 28,
+    "1.0": 23,
+    "1.5": 17
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    4,
+    11,
+    0
+   ],
+   "ct_peaks_outside_m7": 12,
+   "windings_per_m7": 1.8571428571428572,
+   "windings_per_ct_spec": 1.6025503550210114,
+   "windings_per_ct_peaks": {
+    "0.5": 0.9642857142857143,
+    "1.0": 1.173913043478261,
+    "1.5": 1.588235294117647
+   }
+  },
+  {
+   "theta_deg": 145.0,
+   "r0": 1386.4726218424626,
+   "r1": 1786.9726218424626,
+   "length": 401.0,
+   "windings": 23,
+   "m7_runs": 13,
+   "m7_run_width_med": 7.5,
+   "ct_period_spec": 27.675675675675677,
+   "ct_period_ac": 14.0,
+   "ct_peaks": {
+    "0.5": 21,
+    "1.0": 19,
+    "1.5": 15
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    5,
+    8,
+    0
+   ],
+   "ct_peaks_outside_m7": 11,
+   "windings_per_m7": 1.8333333333333333,
+   "windings_per_ct_spec": 1.5873828941160613,
+   "windings_per_ct_peaks": {
+    "0.5": 1.0952380952380953,
+    "1.0": 1.2105263157894737,
+    "1.5": 1.5333333333333334
+   }
+  },
+  {
+   "theta_deg": 150.0,
+   "r0": 1453.606193659904,
+   "r1": 1780.606193659904,
+   "length": 327.5,
+   "windings": 16,
+   "m7_runs": 6,
+   "m7_run_width_med": 15.5,
+   "ct_period_spec": 36.47919293820934,
+   "ct_period_ac": 27.0,
+   "ct_peaks": {
+    "0.5": 19,
+    "1.0": 15,
+    "1.5": 12
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    1,
+    3,
+    2
+   ],
+   "ct_peaks_outside_m7": 8,
+   "windings_per_m7": 3.0,
+   "windings_per_ct_spec": 1.7821895786606088,
+   "windings_per_ct_peaks": {
+    "0.5": 0.8421052631578947,
+    "1.0": 1.0666666666666667,
+    "1.5": 1.3333333333333333
+   }
+  },
+  {
+   "theta_deg": 155.0,
+   "r0": 1388.645205590533,
+   "r1": 1863.145205590533,
+   "length": 475.0,
+   "windings": 22,
+   "m7_runs": 14,
+   "m7_run_width_med": 8.75,
+   "ct_period_spec": 28.249619482496193,
+   "ct_period_ac": 23.5,
+   "ct_peaks": {
+    "0.5": 23,
+    "1.0": 19,
+    "1.5": 17
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    8,
+    5,
+    1
+   ],
+   "ct_peaks_outside_m7": 11,
+   "windings_per_m7": 1.6153846153846154,
+   "windings_per_ct_spec": 1.3084034286629815,
+   "windings_per_ct_peaks": {
+    "0.5": 0.9565217391304348,
+    "1.0": 1.1578947368421053,
+    "1.5": 1.2941176470588236
+   }
+  },
+  {
+   "theta_deg": 160.0,
+   "r0": 1475.1195154740753,
+   "r1": 1935.1195154740753,
+   "length": 460.5,
+   "windings": 19,
+   "m7_runs": 10,
+   "m7_run_width_med": 10.75,
+   "ct_period_spec": 35.62008469449486,
+   "ct_period_ac": 37.0,
+   "ct_peaks": {
+    "0.5": 21,
+    "1.0": 17,
+    "1.5": 15
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    5,
+    3,
+    2
+   ],
+   "ct_peaks_outside_m7": 6,
+   "windings_per_m7": 2.0,
+   "windings_per_ct_spec": 1.469666903790233,
+   "windings_per_ct_peaks": {
+    "0.5": 0.9047619047619048,
+    "1.0": 1.1176470588235294,
+    "1.5": 1.2666666666666666
+   }
+  },
+  {
+   "theta_deg": 165.0,
+   "r0": 1590.5015805837365,
+   "r1": 2095.5015805837365,
+   "length": 505.5,
+   "windings": 21,
+   "m7_runs": 13,
+   "m7_run_width_med": 6.5,
+   "ct_period_spec": 38.31048951048951,
+   "ct_period_ac": 32.0,
+   "ct_peaks": {
+    "0.5": 24,
+    "1.0": 17,
+    "1.5": 13
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    7,
+    5,
+    1
+   ],
+   "ct_peaks_outside_m7": 10,
+   "windings_per_m7": 1.6666666666666667,
+   "windings_per_ct_spec": 1.5915336888630656,
+   "windings_per_ct_peaks": {
+    "0.5": 0.875,
+    "1.0": 1.2352941176470589,
+    "1.5": 1.6153846153846154
+   }
+  },
+  {
+   "theta_deg": 169.99999999999997,
+   "r0": 1797.034368429415,
+   "r1": 2164.534368429415,
+   "length": 368.0,
+   "windings": 18,
+   "m7_runs": 9,
+   "m7_run_width_med": 12.0,
+   "ct_period_spec": 30.81266968325792,
+   "ct_period_ac": 32.5,
+   "ct_peaks": {
+    "0.5": 13,
+    "1.0": 13,
+    "1.5": 13
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    6,
+    3,
+    0
+   ],
+   "ct_peaks_outside_m7": 10,
+   "windings_per_m7": 2.125,
+   "windings_per_ct_spec": 1.5071414518984851,
+   "windings_per_ct_peaks": {
+    "0.5": 1.3846153846153846,
+    "1.0": 1.3846153846153846,
+    "1.5": 1.3846153846153846
+   }
+  },
+  {
+   "theta_deg": 175.0,
+   "r0": 1776.067366695599,
+   "r1": 2233.567366695599,
+   "length": 458.0,
+   "windings": 21,
+   "m7_runs": 15,
+   "m7_run_width_med": 4.0,
+   "ct_period_spec": 24.832451499118164,
+   "ct_period_ac": 22.5,
+   "ct_peaks": {
+    "0.5": 22,
+    "1.0": 19,
+    "1.5": 14
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    9,
+    6,
+    0
+   ],
+   "ct_peaks_outside_m7": 13,
+   "windings_per_m7": 1.4285714285714286,
+   "windings_per_ct_spec": 1.13860585476306,
+   "windings_per_ct_peaks": {
+    "0.5": 0.9545454545454546,
+    "1.0": 1.105263157894737,
+    "1.5": 1.5
+   }
+  },
+  {
+   "theta_deg": 180.0,
+   "r0": 1769.3265028626274,
+   "r1": 2233.8265028626274,
+   "length": 465.0,
+   "windings": 22,
+   "m7_runs": 15,
+   "m7_run_width_med": 8.0,
+   "ct_period_spec": 24.979324706232337,
+   "ct_period_ac": 25.0,
+   "ct_peaks": {
+    "0.5": 21,
+    "1.0": 18,
+    "1.5": 16
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    8,
+    6,
+    1
+   ],
+   "ct_peaks_outside_m7": 10,
+   "windings_per_m7": 1.5,
+   "windings_per_ct_spec": 1.1818175129830353,
+   "windings_per_ct_peaks": {
+    "0.5": 1.0476190476190477,
+    "1.0": 1.2222222222222223,
+    "1.5": 1.375
+   }
+  },
+  {
+   "theta_deg": 185.0,
+   "r0": 1776.390671284326,
+   "r1": 2241.890671284326,
+   "length": 466.0,
+   "windings": 21,
+   "m7_runs": 15,
+   "m7_run_width_med": 6.0,
+   "ct_period_spec": 30.738351254480285,
+   "ct_period_ac": 32.0,
+   "ct_peaks": {
+    "0.5": 26,
+    "1.0": 21,
+    "1.5": 17
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    6,
+    9,
+    0
+   ],
+   "ct_peaks_outside_m7": 12,
+   "windings_per_m7": 1.4285714285714286,
+   "windings_per_ct_spec": 1.3852046702662788,
+   "windings_per_ct_peaks": {
+    "0.5": 0.8076923076923077,
+    "1.0": 1.0,
+    "1.5": 1.2352941176470589
+   }
+  },
+  {
+   "theta_deg": 190.0,
+   "r0": 1796.8901886338135,
+   "r1": 2394.8901886338135,
+   "length": 598.5,
+   "windings": 27,
+   "m7_runs": 19,
+   "m7_run_width_med": 6.0,
+   "ct_period_spec": 27.482555018786904,
+   "ct_period_ac": 28.5,
+   "ct_peaks": {
+    "0.5": 30,
+    "1.0": 23,
+    "1.5": 20
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    13,
+    6,
+    0
+   ],
+   "ct_peaks_outside_m7": 17,
+   "windings_per_m7": 1.4444444444444444,
+   "windings_per_ct_spec": 1.239814512125725,
+   "windings_per_ct_peaks": {
+    "0.5": 0.9,
+    "1.0": 1.173913043478261,
+    "1.5": 1.35
+   }
+  },
+  {
+   "theta_deg": 195.0,
+   "r0": 2229.7702443805993,
+   "r1": 2625.2702443805993,
+   "length": 396.0,
+   "windings": 15,
+   "m7_runs": 13,
+   "m7_run_width_med": 7.0,
+   "ct_period_spec": 31.50769230769231,
+   "ct_period_ac": 32.0,
+   "ct_peaks": {
+    "0.5": 16,
+    "1.0": 15,
+    "1.5": 12
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    7,
+    6,
+    0
+   ],
+   "ct_peaks_outside_m7": 9,
+   "windings_per_m7": 1.1666666666666667,
+   "windings_per_ct_spec": 1.1934731934731935,
+   "windings_per_ct_peaks": {
+    "0.5": 0.9375,
+    "1.0": 1.0,
+    "1.5": 1.25
+   }
+  },
+  {
+   "theta_deg": 200.0,
+   "r0": 2181.673656635383,
+   "r1": 2834.673656635383,
+   "length": 653.5,
+   "windings": 22,
+   "m7_runs": 16,
+   "m7_run_width_med": 5.75,
+   "ct_period_spec": 22.26086956521739,
+   "ct_period_ac": 22.0,
+   "ct_peaks": {
+    "0.5": 24,
+    "1.0": 22,
+    "1.5": 21
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    9,
+    7,
+    0
+   ],
+   "ct_peaks_outside_m7": 15,
+   "windings_per_m7": 1.4,
+   "windings_per_ct_spec": 0.7494095339476398,
+   "windings_per_ct_peaks": {
+    "0.5": 0.9166666666666666,
+    "1.0": 1.0,
+    "1.5": 1.0476190476190477
+   }
+  },
+  {
+   "theta_deg": 205.0,
+   "r0": 2094.7685128201115,
+   "r1": 2938.7685128201115,
+   "length": 844.5,
+   "windings": 18,
+   "m7_runs": 20,
+   "m7_run_width_med": 12.25,
+   "ct_period_spec": 32.00781440781441,
+   "ct_period_ac": 40.5,
+   "ct_peaks": {
+    "0.5": 45,
+    "1.0": 33,
+    "1.5": 28
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    9,
+    8,
+    3
+   ],
+   "ct_peaks_outside_m7": 18,
+   "windings_per_m7": 0.8947368421052632,
+   "windings_per_ct_spec": 0.6822269500777494,
+   "windings_per_ct_peaks": {
+    "0.5": 0.4,
+    "1.0": 0.5454545454545454,
+    "1.5": 0.6428571428571429
+   }
+  },
+  {
+   "theta_deg": 210.0,
+   "r0": 2003.784916602452,
+   "r1": 2751.284916602452,
+   "length": 748.0,
+   "windings": 24,
+   "m7_runs": 21,
+   "m7_run_width_med": 6.0,
+   "ct_period_spec": 34.47811447811448,
+   "ct_period_ac": 28.0,
+   "ct_peaks": {
+    "0.5": 47,
+    "1.0": 38,
+    "1.5": 26
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    7,
+    10,
+    4
+   ],
+   "ct_peaks_outside_m7": 17,
+   "windings_per_m7": 1.15,
+   "windings_per_ct_spec": 1.106249662399395,
+   "windings_per_ct_peaks": {
+    "0.5": 0.5106382978723404,
+    "1.0": 0.631578947368421,
+    "1.5": 0.9230769230769231
+   }
+  },
+  {
+   "theta_deg": 214.99999999999997,
+   "r0": 1969.7869486059317,
+   "r1": 2452.7869486059317,
+   "length": 483.5,
+   "windings": 30,
+   "m7_runs": 19,
+   "m7_run_width_med": 5.0,
+   "ct_period_spec": 24.67828106852497,
+   "ct_period_ac": 18.0,
+   "ct_peaks": {
+    "0.5": 25,
+    "1.0": 21,
+    "1.5": 15
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    14,
+    5,
+    0
+   ],
+   "ct_peaks_outside_m7": 16,
+   "windings_per_m7": 1.6111111111111112,
+   "windings_per_ct_spec": 1.5312273672300911,
+   "windings_per_ct_peaks": {
+    "0.5": 1.2,
+    "1.0": 1.4285714285714286,
+    "1.5": 2.0
+   }
+  },
+  {
+   "theta_deg": 220.0,
+   "r0": 1956.8056105673772,
+   "r1": 2473.8056105673772,
+   "length": 517.5,
+   "windings": 28,
+   "m7_runs": 17,
+   "m7_run_width_med": 4.5,
+   "ct_period_spec": 26.5974025974026,
+   "ct_period_ac": 29.0,
+   "ct_peaks": {
+    "0.5": 25,
+    "1.0": 19,
+    "1.5": 17
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    7,
+    10,
+    0
+   ],
+   "ct_peaks_outside_m7": 9,
+   "windings_per_m7": 1.6875,
+   "windings_per_ct_spec": 1.439086517347387,
+   "windings_per_ct_peaks": {
+    "0.5": 1.12,
+    "1.0": 1.4736842105263157,
+    "1.5": 1.6470588235294117
+   }
+  },
+  {
+   "theta_deg": 225.0,
+   "r0": 1780.7407133888353,
+   "r1": 2496.2407133888355,
+   "length": 716.0,
+   "windings": 26,
+   "m7_runs": 21,
+   "m7_run_width_med": 7.0,
+   "ct_period_spec": 30.567164179104477,
+   "ct_period_ac": 27.5,
+   "ct_peaks": {
+    "0.5": 35,
+    "1.0": 25,
+    "1.5": 24
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    13,
+    6,
+    2
+   ],
+   "ct_peaks_outside_m7": 15,
+   "windings_per_m7": 1.25,
+   "windings_per_ct_spec": 1.109980822146252,
+   "windings_per_ct_peaks": {
+    "0.5": 0.7428571428571429,
+    "1.0": 1.04,
+    "1.5": 1.0833333333333333
+   }
+  },
+  {
+   "theta_deg": 230.0,
+   "r0": 1808.2706544492355,
+   "r1": 2467.7706544492357,
+   "length": 660.0,
+   "windings": 26,
+   "m7_runs": 20,
+   "m7_run_width_med": 7.75,
+   "ct_period_spec": 35.310344827586206,
+   "ct_period_ac": 37.0,
+   "ct_peaks": {
+    "0.5": 29,
+    "1.0": 25,
+    "1.5": 21
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    8,
+    12,
+    0
+   ],
+   "ct_peaks_outside_m7": 13,
+   "windings_per_m7": 1.3157894736842106,
+   "windings_per_ct_spec": 1.3910135841170324,
+   "windings_per_ct_peaks": {
+    "0.5": 0.896551724137931,
+    "1.0": 1.04,
+    "1.5": 1.2380952380952381
+   }
+  },
+  {
+   "theta_deg": 235.0,
+   "r0": 1749.8448056876873,
+   "r1": 2365.3448056876873,
+   "length": 616.0,
+   "windings": 34,
+   "m7_runs": 19,
+   "m7_run_width_med": 12.5,
+   "ct_period_spec": 28.44993247154158,
+   "ct_period_ac": 32.0,
+   "ct_peaks": {
+    "0.5": 33,
+    "1.0": 27,
+    "1.5": 23
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    6,
+    12,
+    1
+   ],
+   "ct_peaks_outside_m7": 13,
+   "windings_per_m7": 1.8333333333333333,
+   "windings_per_ct_spec": 1.5702884805721,
+   "windings_per_ct_peaks": {
+    "0.5": 1.0303030303030303,
+    "1.0": 1.2592592592592593,
+    "1.5": 1.4782608695652173
+   }
+  },
+  {
+   "theta_deg": 239.99999999999997,
+   "r0": 1751.4822689838747,
+   "r1": 2334.4822689838747,
+   "length": 583.5,
+   "windings": 28,
+   "m7_runs": 14,
+   "m7_run_width_med": 9.75,
+   "ct_period_spec": 25.7620253164557,
+   "ct_period_ac": 22.5,
+   "ct_peaks": {
+    "0.5": 27,
+    "1.0": 20,
+    "1.5": 16
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    6,
+    6,
+    2
+   ],
+   "ct_peaks_outside_m7": 9,
+   "windings_per_m7": 2.076923076923077,
+   "windings_per_ct_spec": 1.2362240083303506,
+   "windings_per_ct_peaks": {
+    "0.5": 1.037037037037037,
+    "1.0": 1.4,
+    "1.5": 1.75
+   }
+  },
+  {
+   "theta_deg": 244.99999999999997,
+   "r0": 1810.5232323584491,
+   "r1": 2231.023232358449,
+   "length": 421.0,
+   "windings": 13,
+   "m7_runs": 8,
+   "m7_run_width_med": 6.5,
+   "ct_period_spec": 32.507936507936506,
+   "ct_period_ac": 28.0,
+   "ct_peaks": {
+    "0.5": 20,
+    "1.0": 15,
+    "1.5": 13
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    4,
+    4,
+    0
+   ],
+   "ct_peaks_outside_m7": 11,
+   "windings_per_m7": 1.7142857142857142,
+   "windings_per_ct_spec": 1.0038080156845002,
+   "windings_per_ct_peaks": {
+    "0.5": 0.65,
+    "1.0": 0.8666666666666667,
+    "1.5": 1.0
+   }
+  },
+  {
+   "theta_deg": 249.99999999999997,
+   "r0": 1745.6570233489097,
+   "r1": 2149.6570233489097,
+   "length": 404.5,
+   "windings": 19,
+   "m7_runs": 13,
+   "m7_run_width_med": 6.5,
+   "ct_period_spec": 39.38461538461539,
+   "ct_period_ac": 40.5,
+   "ct_peaks": {
+    "0.5": 19,
+    "1.0": 16,
+    "1.5": 12
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    7,
+    5,
+    1
+   ],
+   "ct_peaks_outside_m7": 9,
+   "windings_per_m7": 1.5,
+   "windings_per_ct_spec": 1.8499572121327374,
+   "windings_per_ct_peaks": {
+    "0.5": 1.0,
+    "1.0": 1.1875,
+    "1.5": 1.5833333333333333
+   }
+  },
+  {
+   "theta_deg": 255.00000000000003,
+   "r0": 1698.0933614326973,
+   "r1": 2067.0933614326973,
+   "length": 369.5,
+   "windings": 17,
+   "m7_runs": 12,
+   "m7_run_width_med": 8.25,
+   "ct_period_spec": 30.594425863991084,
+   "ct_period_ac": 31.5,
+   "ct_peaks": {
+    "0.5": 12,
+    "1.0": 11,
+    "1.5": 10
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    5,
+    7,
+    0
+   ],
+   "ct_peaks_outside_m7": 4,
+   "windings_per_m7": 1.4545454545454546,
+   "windings_per_ct_spec": 1.4075919883297658,
+   "windings_per_ct_peaks": {
+    "0.5": 1.4166666666666667,
+    "1.0": 1.5454545454545454,
+    "1.5": 1.7
+   }
+  },
+  {
+   "theta_deg": 260.0,
+   "r0": 755.3053335743383,
+   "r1": 1273.8053335743384,
+   "length": 519.0,
+   "windings": 41,
+   "m7_runs": 27,
+   "m7_run_width_med": 4.0,
+   "ct_period_spec": 23.01123595505618,
+   "ct_period_ac": 9.5,
+   "ct_peaks": {
+    "0.5": 35,
+    "1.0": 30,
+    "1.5": 24
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    16,
+    11,
+    0
+   ],
+   "ct_peaks_outside_m7": 19,
+   "windings_per_m7": 1.5384615384615385,
+   "windings_per_ct_spec": 1.8178433028079064,
+   "windings_per_ct_peaks": {
+    "0.5": 1.1714285714285715,
+    "1.0": 1.3666666666666667,
+    "1.5": 1.7083333333333333
+   }
+  },
+  {
+   "theta_deg": 265.0,
+   "r0": 760.4747793597033,
+   "r1": 1259.4747793597035,
+   "length": 499.5,
+   "windings": 39,
+   "m7_runs": 23,
+   "m7_run_width_med": 5.0,
+   "ct_period_spec": 22.132223763291723,
+   "ct_period_ac": 12.0,
+   "ct_peaks": {
+    "0.5": 30,
+    "1.0": 24,
+    "1.5": 21
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    12,
+    11,
+    0
+   ],
+   "ct_peaks_outside_m7": 13,
+   "windings_per_m7": 1.7272727272727273,
+   "windings_per_ct_spec": 1.7280414950317862,
+   "windings_per_ct_peaks": {
+    "0.5": 1.3,
+    "1.0": 1.625,
+    "1.5": 1.8571428571428572
+   }
+  },
+  {
+   "theta_deg": 270.0,
+   "r0": 777.2823212783928,
+   "r1": 1254.7823212783928,
+   "length": 478.0,
+   "windings": 36,
+   "m7_runs": 20,
+   "m7_run_width_med": 5.0,
+   "ct_period_spec": 23.06995270102066,
+   "ct_period_ac": 22.5,
+   "ct_peaks": {
+    "0.5": 22,
+    "1.0": 19,
+    "1.5": 19
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    13,
+    7,
+    0
+   ],
+   "ct_peaks_outside_m7": 12,
+   "windings_per_m7": 1.8421052631578947,
+   "windings_per_ct_spec": 1.7374859774827276,
+   "windings_per_ct_peaks": {
+    "0.5": 1.6363636363636365,
+    "1.0": 1.894736842105263,
+    "1.5": 1.894736842105263
+   }
+  },
+  {
+   "theta_deg": 275.0,
+   "r0": 808.4049176611197,
+   "r1": 1259.4049176611197,
+   "length": 451.5,
+   "windings": 32,
+   "m7_runs": 17,
+   "m7_run_width_med": 5.0,
+   "ct_period_spec": 24.767185289957567,
+   "ct_period_ac": 13.0,
+   "ct_peaks": {
+    "0.5": 24,
+    "1.0": 18,
+    "1.5": 15
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    15,
+    2,
+    0
+   ],
+   "ct_peaks_outside_m7": 16,
+   "windings_per_m7": 1.9375,
+   "windings_per_ct_spec": 1.7553708289670924,
+   "windings_per_ct_peaks": {
+    "0.5": 1.3333333333333333,
+    "1.0": 1.7777777777777777,
+    "1.5": 2.1333333333333333
+   }
+  },
+  {
+   "theta_deg": 280.0,
+   "r0": 846.9518006009525,
+   "r1": 1273.9518006009525,
+   "length": 427.5,
+   "windings": 31,
+   "m7_runs": 17,
+   "m7_run_width_med": 5.0,
+   "ct_period_spec": 15.170370370370371,
+   "ct_period_ac": 15.5,
+   "ct_peaks": {
+    "0.5": 29,
+    "1.0": 23,
+    "1.5": 19
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    8,
+    9,
+    0
+   ],
+   "ct_peaks_outside_m7": 14,
+   "windings_per_m7": 1.875,
+   "windings_per_ct_spec": 1.1000736408923544,
+   "windings_per_ct_peaks": {
+    "0.5": 1.0689655172413792,
+    "1.0": 1.3478260869565217,
+    "1.5": 1.631578947368421
+   }
+  },
+  {
+   "theta_deg": 285.0,
+   "r0": 1433.0787082377765,
+   "r1": 1736.5787082377765,
+   "length": 304.0,
+   "windings": 32,
+   "m7_runs": 14,
+   "m7_run_width_med": 4.25,
+   "ct_period_spec": 30.567164179104477,
+   "ct_period_ac": 15.5,
+   "ct_peaks": {
+    "0.5": 20,
+    "1.0": 15,
+    "1.5": 12
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    12,
+    2,
+    0
+   ],
+   "ct_peaks_outside_m7": 13,
+   "windings_per_m7": 2.3846153846153846,
+   "windings_per_ct_spec": 3.217596229379419,
+   "windings_per_ct_peaks": {
+    "0.5": 1.6,
+    "1.0": 2.1333333333333333,
+    "1.5": 2.6666666666666665
+   }
+  },
+  {
+   "theta_deg": 294.99999999999994,
+   "r0": 1272.7511917263712,
+   "r1": 1648.7511917263712,
+   "length": 376.5,
+   "windings": 39,
+   "m7_runs": 21,
+   "m7_run_width_med": 4.0,
+   "ct_period_spec": 18.014814814814812,
+   "ct_period_ac": 19.5,
+   "ct_peaks": {
+    "0.5": 27,
+    "1.0": 23,
+    "1.5": 17
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    9,
+    12,
+    0
+   ],
+   "ct_peaks_outside_m7": 11,
+   "windings_per_m7": 1.9,
+   "windings_per_ct_spec": 1.8660764350007375,
+   "windings_per_ct_peaks": {
+    "0.5": 1.4444444444444444,
+    "1.0": 1.6956521739130435,
+    "1.5": 2.2941176470588234
+   }
+  },
+  {
+   "theta_deg": 300.0,
+   "r0": 1303.786566591682,
+   "r1": 1611.786566591682,
+   "length": 308.5,
+   "windings": 34,
+   "m7_runs": 17,
+   "m7_run_width_med": 4.5,
+   "ct_period_spec": 26.94736842105263,
+   "ct_period_ac": 22.0,
+   "ct_peaks": {
+    "0.5": 19,
+    "1.0": 16,
+    "1.5": 14
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    12,
+    5,
+    0
+   ],
+   "ct_peaks_outside_m7": 11,
+   "windings_per_m7": 2.0625,
+   "windings_per_ct_spec": 2.9698882538599336,
+   "windings_per_ct_peaks": {
+    "0.5": 1.7894736842105263,
+    "1.0": 2.125,
+    "1.5": 2.4285714285714284
+   }
+  },
+  {
+   "theta_deg": 305.0,
+   "r0": 1222.3398099121282,
+   "r1": 1565.3398099121282,
+   "length": 343.5,
+   "windings": 37,
+   "m7_runs": 19,
+   "m7_run_width_med": 4.0,
+   "ct_period_spec": 15.971948491626867,
+   "ct_period_ac": 15.5,
+   "ct_peaks": {
+    "0.5": 23,
+    "1.0": 20,
+    "1.5": 17
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    11,
+    8,
+    0
+   ],
+   "ct_peaks_outside_m7": 12,
+   "windings_per_m7": 2.0,
+   "windings_per_ct_spec": 1.720413665764757,
+   "windings_per_ct_peaks": {
+    "0.5": 1.608695652173913,
+    "1.0": 1.85,
+    "1.5": 2.176470588235294
+   }
+  },
+  {
+   "theta_deg": 310.0,
+   "r0": 1234.5615190740155,
+   "r1": 1538.5615190740155,
+   "length": 304.5,
+   "windings": 33,
+   "m7_runs": 17,
+   "m7_run_width_med": 4.5,
+   "ct_period_spec": 18.788990825688074,
+   "ct_period_ac": 33.5,
+   "ct_peaks": {
+    "0.5": 22,
+    "1.0": 15,
+    "1.5": 14
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    9,
+    8,
+    0
+   ],
+   "ct_peaks_outside_m7": 7,
+   "windings_per_m7": 2.0,
+   "windings_per_ct_spec": 2.0362453111583134,
+   "windings_per_ct_peaks": {
+    "0.5": 1.5,
+    "1.0": 2.2,
+    "1.5": 2.357142857142857
+   }
+  },
+  {
+   "theta_deg": 315.0,
+   "r0": 1121.9979144144663,
+   "r1": 1510.4979144144663,
+   "length": 389.0,
+   "windings": 37,
+   "m7_runs": 20,
+   "m7_run_width_med": 4.5,
+   "ct_period_spec": 16.78688524590164,
+   "ct_period_ac": 10.0,
+   "ct_peaks": {
+    "0.5": 27,
+    "1.0": 23,
+    "1.5": 18
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    7,
+    13,
+    0
+   ],
+   "ct_peaks_outside_m7": 10,
+   "windings_per_m7": 1.894736842105263,
+   "windings_per_ct_spec": 1.596696025959796,
+   "windings_per_ct_peaks": {
+    "0.5": 1.3703703703703705,
+    "1.0": 1.608695652173913,
+    "1.5": 2.0555555555555554
+   }
+  },
+  {
+   "theta_deg": 320.0,
+   "r0": 1160.3094935836548,
+   "r1": 1494.8094935836548,
+   "length": 335.0,
+   "windings": 31,
+   "m7_runs": 18,
+   "m7_run_width_med": 4.5,
+   "ct_period_spec": 26.532793522267205,
+   "ct_period_ac": 24.5,
+   "ct_peaks": {
+    "0.5": 21,
+    "1.0": 17,
+    "1.5": 13
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    10,
+    8,
+    0
+   ],
+   "ct_peaks_outside_m7": 9,
+   "windings_per_m7": 1.7647058823529411,
+   "windings_per_ct_spec": 2.4552734304187562,
+   "windings_per_ct_peaks": {
+    "0.5": 1.4761904761904763,
+    "1.0": 1.8235294117647058,
+    "1.5": 2.3846153846153846
+   }
+  },
+  {
+   "theta_deg": 325.0,
+   "r0": 1124.1613267909186,
+   "r1": 1486.6613267909186,
+   "length": 363.0,
+   "windings": 29,
+   "m7_runs": 14,
+   "m7_run_width_med": 5.0,
+   "ct_period_spec": 27.86523509811181,
+   "ct_period_ac": 9.0,
+   "ct_peaks": {
+    "0.5": 19,
+    "1.0": 18,
+    "1.5": 14
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    8,
+    5,
+    1
+   ],
+   "ct_peaks_outside_m7": 11,
+   "windings_per_m7": 2.1538461538461537,
+   "windings_per_ct_spec": 2.226148258526839,
+   "windings_per_ct_peaks": {
+    "0.5": 1.5263157894736843,
+    "1.0": 1.6111111111111112,
+    "1.5": 2.0714285714285716
+   }
+  },
+  {
+   "theta_deg": 330.0,
+   "r0": 1062.9687155181962,
+   "r1": 1426.4687155181962,
+   "length": 364.0,
+   "windings": 28,
+   "m7_runs": 8,
+   "m7_run_width_med": 17.25,
+   "ct_period_spec": 31.98450363196126,
+   "ct_period_ac": 14.0,
+   "ct_peaks": {
+    "0.5": 15,
+    "1.0": 13,
+    "1.5": 8
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    3,
+    3,
+    2
+   ],
+   "ct_peaks_outside_m7": 5,
+   "windings_per_m7": 3.857142857142857,
+   "windings_per_ct_spec": 2.4603464332277896,
+   "windings_per_ct_peaks": {
+    "0.5": 1.8666666666666667,
+    "1.0": 2.1538461538461537,
+    "1.5": 3.5
+   }
+  },
+  {
+   "theta_deg": 339.99999999999994,
+   "r0": 1115.7456609518467,
+   "r1": 1416.2456609518467,
+   "length": 301.0,
+   "windings": 15,
+   "m7_runs": 11,
+   "m7_run_width_med": 6.5,
+   "ct_period_spec": 24.674698795180724,
+   "ct_period_ac": 22.5,
+   "ct_peaks": {
+    "0.5": 13,
+    "1.0": 12,
+    "1.5": 10
+   },
+   "m7_runs_with_0_1_2plus_ct_peaks": [
+    4,
+    7,
+    0
+   ],
+   "ct_peaks_outside_m7": 5,
+   "windings_per_m7": 1.4,
+   "windings_per_ct_spec": 1.229636152583757,
+   "windings_per_ct_peaks": {
+    "0.5": 1.1538461538461537,
+    "1.0": 1.25,
+    "1.5": 1.5
+   }
+  }
+ ]
+}

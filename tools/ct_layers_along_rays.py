@@ -6,7 +6,9 @@ Along each ray from the umbilicus, between the crossings of two fitted windings 
   m7         runs of the prediction >= 128, joined when closer than 4 vox (as `winding-audit density`)
   CT period  spectral peak (1/40..1/6 per vox) of the detrended CT profile in 128-vox windows, and the first
              autocorrelation peak; layers = path length / period
-  CT peaks   local maxima of the smoothed, detrended profile with prominence >= p (in local std units)
+  CT peaks   local maxima of the smoothed, detrended profile with prominence >= p (in local std units) that are
+             brighter than air (above air + 0.35 (papyrus - air), 10th / 90th percentile of the ray): without that
+             floor, noise in wide air gaps counts as layers
 and, per m7 run, the number of CT peaks inside it (2+ = the prediction joins touching sheets) and CT peaks that
 fall between m7 runs (sheets the prediction misses)."""
 import sys, os, json, argparse
@@ -29,6 +31,9 @@ ap.add_argument('--first', type=int, default=40)
 ap.add_argument('--last', type=int, default=115)
 ap.add_argument('--rays', type=int, default=36)
 ap.add_argument('--out', required=True)
+ap.add_argument('--floor-frac', type=float, default=0.35,
+                help='a CT peak counts as a layer only if brighter than air + this share of (papyrus - air), '
+                     'from the 10th / 90th percentiles of the ray')
 a = ap.parse_args()
 B = f'D:/VesuviusCTCache/spiral/{a.scroll}'
 CH = 128
@@ -130,7 +135,12 @@ for i, th in enumerate(thetas):
     lags = np.arange(len(ac)) * step
     pk_ac = [lags[j] for j in range(1, len(ac) - 1)
              if 6 <= lags[j] <= 45 and ac[j] >= ac[j - 1] and ac[j] >= ac[j + 1]]
-    peaks = {pr: find_peaks(zc, prominence=pr, distance=int(5 / step))[0] for pr in (0.5, 1.0, 1.5)}
+    air, pap = np.percentile(sm, [10, 90])
+    floor = air + a.floor_frac * (pap - air)          # a layer must be brighter than the air between layers
+    peaks = {}
+    for pr in (0.5, 1.0, 1.5):
+        ix = find_peaks(zc, prominence=pr, distance=int(5 / step))[0]
+        peaks[pr] = ix[sm[ix] >= floor]
     dd = np.diff(np.pad(m7.astype(np.int8), (1, 1)))
     s0, s1 = np.nonzero(dd == 1)[0], np.nonzero(dd == -1)[0]
     runs = []
