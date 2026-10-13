@@ -3,10 +3,11 @@
 Checks the windings of a spiral fit against each other and against the surface prediction, and says where two
 windings sit on the same sheet, where a wrap was skipped, and where a node is not on a sheet at all.
 
-**Status: 0.3 (12 October 2026): audit, plus a first repair.** The audit measures, per node, how far each winding
-is from the next one's surface and from the predicted sheets. The repair moves a node that is off any sheet, or
-on a neighbouring winding's sheet, onto the sheet between its two neighbours. Numbers in this README are
-measurements on real fits and will change.
+**Status: 0.4 (13 October 2026): audit, repair, and single-sheet pieces.** The audit measures, per node, how far
+each winding is from the next one's surface and from the predicted sheets. The repair moves a node that is off any
+sheet, or on a neighbouring winding's sheet, onto the sheet between its two neighbours. The pieces mark which parts
+of each winding stay on one sheet and are read only once. Numbers in this README are measurements on real fits and
+will change.
 
 ## Why
 
@@ -19,8 +20,8 @@ then read nothing new.
 On our own PHerc. 0175A fit (120 windings, band z 6900–7900, 853 cm² after flattening), 21 % of the nodes lie within
 0.3 sheet pitch of the next winding's surface, and 41 of 119 winding pairs are collapsed onto one sheet over most of
 their area. 15 % of the nodes are on no predicted sheet. Erwin's winning pair shows the same defects, at similar
-rates, mostly outside its letters. This tool makes them visible per node, per winding and per band, and repairs the
-part that a re-snap can repair.
+rates, mostly outside its letters. This tool makes them visible per node, per winding and per band, repairs the part
+that a re-snap can repair, and marks the single-sheet pieces of the rest, each kept once.
 
 ## What it measures
 
@@ -70,6 +71,15 @@ part that a re-snap can repair.
    neighbour, so two windings on one sheet are separated once. Skipped wraps are left alone: every winding after
    the skip follows it, so no node is misplaced locally; it is a topology error and stays in the audit.
 
+6. **Pieces** (`winding-audit pieces`). What a re-snap cannot fix can still be marked. For each winding, the nodes
+   on a predicted sheet are joined across grid edges that stay on one sheet (the step along the normal is under
+   0.35 pitch and the points at 1/4, 1/2 and 3/4 of the edge are on a sheet). Pieces are cut at the edge of a
+   collapsed region, because a winding can only reach another sheet by crossing a gap or by landing on a
+   neighbour's sheet. Going from the inside out, nodes that lie on the inner neighbour's kept surface are dropped
+   as duplicates, so a shared sheet is kept once, in the inner winding. Pieces under 0.05 cm² are dropped. The
+   output is a mask per winding (a masked tifxyz and a piece-label image), so an existing render can be read
+   through it unchanged.
+
 ## Results (12 October 2026, v0.3)
 
 Three bands fitted with the PHerc. 343 recipe (villa `fit_spiral` at `0fb38c45`, 20k steps, snapped onto the
@@ -101,6 +111,13 @@ so its "off any sheet" figure is expected to be high.
   nodes within 2 voxels; w070→w071: 2 %). Where a pair collapses, every sheet around it still holds one winding, so
   the band has more windings than sheets there (next point). Erwin's winning pair has the same defect over 21.5 % of w047, mostly outside the
   letters (14 % inside the letter area, 24 % elsewhere).
+- **Collapsed windings render the same papyrus.** On two consecutive PHerc. 0800 windings (w095 and w096 of a band
+  at z 6300–7800, rendered from the flatten output), the rendered surface patches at matched nodes correlate at a
+  median of 0.55 where the audit puts the windings within 0.3 pitch, against 0.28 for adjacent wraps and 0.31 for
+  random pairs. The audit's "same sheet" is the CT's "same papyrus, read twice".
+- **The prediction does not miss sheets; the fit has too many windings.** On three rendered PHerc. 0175A windings
+  the CT's own sheet period along the node normals (first autocorrelation peak of the depth profiles) is 15–17
+  voxels, the same as the prediction's pitch (14–15), while the windings there are 11–13 voxels apart.
 - **The collapse starts in the fit, and the snap makes it.** Before the snap, the PHerc. 0175A windings do not touch
   (2.4 % of nodes within 0.3 pitch of the next winding), but the inner ones are 8–10 voxels apart against a sheet
   pitch of 15 in the prediction: about 1.5 windings per sheet. The snap then moves every winding to its nearest
@@ -125,9 +142,41 @@ so its "off any sheet" figure is expected to be high.
 
 ![PHerc. 0175A w110 → w111 on the winding grid: spacing flags, distance in pitches, sheet verdict, node-to-sheet distance](docs/pherc0175a_w110_flat.png)
 
+![PHerc. 0800 w095 and w096: texture correlation of matched rendered patches, collapsed against adjacent and random node pairs](docs/pherc0800_duplicate_texture.png)
+
 ![Repair checked against the CT: mean depth profile of kept nodes and of moved nodes at their old and new positions](docs/pherc0175a_repair_ct.png)
 
 ![PHerc. 0175A slice z 7400, all flattened windings over the prediction, coloured by sheet verdict](docs/pherc0175a_z7400.png)
+
+## Single-sheet pieces (13 October 2026, v0.4)
+
+How much of each band is surface that stays on one sheet and is read once. Areas here count all 120 windings of a
+band (the audit table counts the 119 that have a next winding).
+
+<!-- pieces-table -->
+| band | area | on a sheet | duplicate of the inner winding | kept in single-sheet pieces | pieces (≥ 1 cm²) |
+|---|---|---|---|---|---|
+| PHerc. 343, w047 + w048 (control) | 14 cm² | 74 % | 1 cm² (6 %) | **7 cm² (48 %)** | 17 (2) |
+| PHerc. 0175A, flatten | 867 cm² | 85 % | 118 cm² (14 %) | **513 cm² (59 %)** | 873 (104) |
+| PHerc. 0175A, flatten + repair | 867 cm² | 87 % | 115 cm² (13 %) | **538 cm² (62 %)** | 840 (107) |
+| PHerc. 0813, flatten | 1107 cm² | 65 % | 57 cm² (5 %) | **383 cm² (35 %)** | 1345 (89) |
+| PHerc. 0800, flatten | 1054 cm² | 72 % | 103 cm² (10 %) | **339 cm² (32 %)** | 1577 (42) |
+<!-- /pieces-table -->
+
+- **About a third to three fifths of each band is single-sheet surface read once.** PHerc. 0175A keeps 513 of
+  867 cm² (59 %), PHerc. 0813 383 of 1,107 cm² (35 %), PHerc. 0800 339 of 1,054 cm² (32 %). The repair adds 25 cm²
+  on PHerc. 0175A (538 cm²).
+- **What is kept is papyrus; what is dropped is gap or a second copy.** On the three rendered PHerc. 0175A windings,
+  kept nodes have a mean CT value of 99 at the node; dropped off-sheet nodes 90 (the gap between wraps); dropped
+  duplicates 114 (papyrus that the inner winding already covers).
+- **Erwin's letters survive the mask.** 15 of the 18 letter centres of the PHerc. 343 image lie in a kept piece (one
+  of them through w047's copy: at letters 4 and 5, w048 lies 0.3–1.8 voxels from w047's surface, so the same
+  papyrus is kept once, in w047). For the other three, 40–64 % of the surrounding 5 × 5 nodes are kept.
+- **The mask is conservative.** Pieces break wherever the prediction has a hole along the sheet, so some real
+  papyrus is dropped as "cut or too small" (mean CT 102). It is meant to say which parts of a render can be trusted,
+  not to replace the render.
+
+![PHerc. 0175A w111: single-sheet pieces, the duplicate of w110 (red) and nodes off a sheet (grey)](docs/pherc0175a_w111_pieces.png)
 
 ## Positive control: Erwin Nieuwlaar's PHerc. 343 windings
 
@@ -170,6 +219,12 @@ Run the audit on the fit output too, before the snap (`meshes/fitted_<tag>` of a
 nodes are not on sheets yet, but the pitch ratio already shows where the fit has too many turns. Pairs under 0.75
 of the prediction's sheet pitch will be paired up by a nearest-sheet snap.
 
+```
+winding-audit pieces <band dir> --surface <m7 zarr root> --group 0 --out runs/pherc0175a_pieces --voxel-um 8.64 \
+    --figures
+# masked tifxyz in <out>/windings, piece labels in <out>/labels, pieces.csv and pieces_summary.json
+```
+
 `--surface` is the surface prediction at the same resolution level as the tifxyz coordinates (level 0 voxels for the
 spiral fitter's output). `--no-sheets` runs the spacing check only. `--subdir tifxyz/flatten.tifxyz` reads lasagna
 flatten output, where each winding folder holds its tifxyz one level down. `--node-tol` sets how far (voxels) a
@@ -196,7 +251,7 @@ pytest tests
 - Collapsed windings are reported, not repaired: separating them means moving every later winding by one sheet in
   that sector, which is a re-fit.
 - Agreement with the surface prediction is agreement with a model, not with the papyrus. The CT checks in this
-  README cover the control pair and three rendered PHerc. 0175A windings only.
+  README cover the control pair, three rendered PHerc. 0175A windings and two rendered PHerc. 0800 windings.
 
 ## Credits
 

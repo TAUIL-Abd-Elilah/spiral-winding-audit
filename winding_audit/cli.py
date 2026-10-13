@@ -228,8 +228,12 @@ def _pieces_figure(w, res, out_png):
     k = res.label > 0
     img[k] = (res.label[k] - 1) % 20
     fig, ax = plt.subplots(figsize=(min(18, 4 + w.xyz.shape[1] / 40), 3.2), dpi=110)
-    cmap = plt.get_cmap("tab20").copy()
-    ax.imshow(np.where(img >= 0, img, np.nan), cmap=cmap, vmin=0, vmax=19, interpolation="nearest", aspect="auto")
+    from matplotlib.colors import ListedColormap
+    cmap = ListedColormap(["#1f77b4", "#2ca02c", "#ff7f0e", "#9467bd", "#17becf", "#bcbd22", "#8c564b", "#e377c2",
+                           "#aec7e8", "#98df8a", "#ffbb78", "#c5b0d5", "#9edae5", "#dbdb8d", "#c49c94", "#f7b6d2",
+                           "#393b79", "#637939", "#8c6d31", "#7b4173"])    # no reds: red is the duplicate colour
+    ax.imshow(np.where(img >= 0, img, np.nan), cmap=cmap, vmin=-0.5, vmax=19.5, interpolation="nearest",
+              aspect="auto")
     ax.imshow(np.where(img == -1, 1.0, np.nan), cmap="Greys", vmin=0, vmax=1.5, interpolation="nearest",
               aspect="auto")
     ax.imshow(np.where(img == -2, 1.0, np.nan), cmap="Reds", vmin=0, vmax=1.5, interpolation="nearest",
