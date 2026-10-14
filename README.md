@@ -340,6 +340,13 @@ winding-audit audit demo/windings --surface demo/surface.zarr --out demo/audit -
 pytest tests
 ```
 
+## Related work
+
+[kit stackcheck](https://github.com/ChaseHendrick/Scrolls) (ChaseHendrick, 14 October 2026) checks a stack of published
+tifxyz segments against the umbilicus by geometry and flags coincident adjacent pairs, odd spacing and missing
+sectors; it does not say which segment left its sheet and does not repair. This tool works on spiral-fit output after
+the snap onto the prediction, measures stacking against the raw CT, and repairs it from the CT.
+
 ## Inputs and limits
 
 - Input windings are tifxyz folders as written by villa's spiral fitter / snap (x.tif, y.tif, z.tif, meta.json;
