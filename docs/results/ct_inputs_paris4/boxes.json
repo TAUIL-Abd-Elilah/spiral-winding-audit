@@ -1,0 +1,56 @@
+[
+ {
+  "kz": 70,
+  "ky": 24,
+  "kx": 32,
+  "n": 6,
+  "rays": 179,
+  "segments": 39,
+  "radius": 296
+ },
+ {
+  "kz": 77,
+  "ky": 22,
+  "kx": 36,
+  "n": 6,
+  "rays": 457,
+  "segments": 23,
+  "radius": 208
+ },
+ {
+  "kz": 124,
+  "ky": 30,
+  "kx": 30,
+  "n": 6,
+  "rays": 120,
+  "segments": 35,
+  "radius": 602
+ },
+ {
+  "kz": 68,
+  "ky": 30,
+  "kx": 40,
+  "n": 6,
+  "rays": 98,
+  "segments": 35,
+  "radius": 1132
+ },
+ {
+  "kz": 66,
+  "ky": 28,
+  "kx": 34,
+  "n": 6,
+  "rays": 85,
+  "segments": 32,
+  "radius": 564
+ },
+ {
+  "kz": 100,
+  "ky": 32,
+  "kx": 28,
+  "n": 6,
+  "rays": 200,
+  "segments": 24,
+  "radius": 279
+ }
+]

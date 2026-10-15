@@ -3,7 +3,7 @@
 Checks the windings of a spiral fit against each other and against the surface prediction, and says where two
 windings sit on the same sheet, where a wrap was skipped, and where a node is not on a sheet at all.
 
-**Status: 0.6.0.dev0 (15 October 2026): audit, repair (with an optional CT-aware mode), single-sheet pieces, a density count, raw-CT ray counts, and, new and not yet tried on real CT, winding constraints from the CT in the spiral fitter's own input formats ([below](#winding-constraints-from-the-ct-for-the-spiral-fitter-15-october-2026-v06-in-progress)).** The audit measures, per node, how far
+**Status: 0.6.0.dev0 (15 October 2026): audit, repair (with an optional CT-aware mode), single-sheet pieces, a density count, raw-CT ray counts, and an attempt at winding constraints from the CT in the spiral fitter's own input formats, which on real CT (PHerc. Paris 4) turned out not accurate enough to supervise a fit ([below](#winding-constraints-from-the-ct-for-the-spiral-fitter-a-negative-result-v06)).** The audit measures, per node, how far
 each winding is from the next one's surface and from the predicted sheets. The repair moves a node that is off any
 sheet, or on a neighbouring winding's sheet, onto the sheet between its two neighbours. The pieces mark which parts
 of each winding stay on one sheet and are read only once. Numbers in this README are measurements on real fits and
@@ -16,7 +16,14 @@ was proposed to villa as ScrollPrize/villa#2071 and declined: the maintainers' v
 not have this failure mode. The fits measured here were made with `fit_spiral` at `0fb38c45`, the commit of the
 PHerc. 343 recipe.
 
-## Winding constraints from the CT for the spiral fitter (15 October 2026, v0.6, in progress)
+## Winding constraints from the CT for the spiral fitter: a negative result (v0.6)
+
+**Result first (16 October 2026).** Counting bright CT layers along rays does not give winding levels reliable enough
+to supervise `fit_spiral`. On PHerc. Paris 4, along 1,139 of the team's own winding-inference rays in six CT boxes,
+the stored pairs agree with the team's neural winding store less often than the bar set before the test, and human
+annotations agree with it: between two annotated points a plain peak count is wrong on a quarter to a third of the
+segments. Details and
+numbers are at the end of this section. The format tools described here work; the crossing rule is what fails.
 
 villa's `fit_spiral` has a dense winding-spacing loss that is on by default (`dense_spacing_mode: "winding_model"`).
 It needs two inputs in the dataset: a `winding_inference/` store of sheet crossings along rays, and an `outer_shell/`
@@ -73,11 +80,28 @@ What is checked so far, on a synthetic masked CT with two touching sheets and on
   and in faint sectors, faint outer layers taken for the outside, unbounded rays, holes in the shell, one-slice
   bands, truncated chunks, coarser CT levels, the dataset spec and umbilicus, and chunk re-reads at real radii.
 
-Not checked yet: real CT. Next come the crossing levels along the team's own PHerc. Paris 4 rays, compared with the
-neural store and with the human relative-winding annotations, then one fit on an eligible scroll with and without the
-store. A radial ray that crosses a fold meets one sheet more than once; that is caught only where the gaps turn
-irregular. To run the villa round trips, set `VILLA_SPIRAL_DIR` to a villa checkout's `spiral-fitting` folder before
-`pytest`.
+To run the villa round trips, set `VILLA_SPIRAL_DIR` to a villa checkout's `spiral-fitting` folder before `pytest`.
+
+**On real CT: PHerc. Paris 4 (16 October 2026).** The test was set before any result was seen (October notes). The
+crossing rule ran along the team's own rays, from shard 0 of the published `winding_inference` store with checksums
+verified, in six CT boxes of 128 × 768 × 768 voxels. The boxes sit at radii 208 to 1,132, on level 2 (9.6 µm) of
+the 2.4 µm scan. Stored crossings were matched to the team's neural crossings within 5 voxels. Separately, CT layers
+were counted between consecutive points of the human relative-winding annotations (188 segments). The tool is
+`tools/paris4_validate.py`, and the results are in `docs/results/ct_inputs_paris4/`.
+
+| | bar | default rule | tuned on 3 boxes | same, on the other 3 |
+|---|---|---|---|---|
+| adjacent stored pairs one neural winding apart | ≥ 85 % | 82.8 % (1,155 pairs) | 88.5 % | 70.3 % (528 pairs) |
+| pairs 3 to 15 apart with the neural difference | median error 0, p95 ≤ 1 | 42 % exact; median 1, p95 2 | 66 % exact; p95 2 | 33 % exact; median 1, p95 5 |
+| human segments with the right number of CT layers between the points | (reported) | 66 % | 71 % | 77 % |
+
+The default rule fails the bar. Tuning over 144 parameter sets helps on the boxes it was tuned on and fails on the
+others. Between two consecutive neural crossings the CT shows exactly one peak on about 60 % of intervals, none on
+12–24 % and two on 13–26 %. At 9.6 µm a sheet's contrast is weak, about 0.2 standard deviations on average, and a
+peak picker errs both ways. The gap and pair-sum cuts catch most of these errors, but not enough of them. The 17–30 %
+of adjacent targets that disagree would pull a fit the wrong way. This supports the team's neural winding model over
+CT peak counting. The store writer, the checker and the outer-shell builder still work with any better source of
+crossings. A radial ray that crosses a fold meets one sheet more than once, which is a second limit, not tested here.
 
 ## Why
 

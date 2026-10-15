@@ -1,0 +1,313 @@
+{
+ "train_boxes": [
+  0,
+  2,
+  4
+ ],
+ "grid": {
+  "smooth": [
+   1.0,
+   2.0,
+   3.0
+  ],
+  "prominence": [
+   1.0,
+   1.5,
+   2.0
+  ],
+  "min_sep": [
+   3.0,
+   6.0
+  ],
+  "floor_frac": [
+   0.35,
+   0.5
+  ],
+  "gap": [
+   [
+    0.6,
+    1.5,
+    0.8,
+    1.25
+   ],
+   [
+    0.7,
+    1.35,
+    0.85,
+    1.15
+   ]
+  ],
+  "edge_trim": [
+   1,
+   2
+  ]
+ },
+ "n_candidates": 144,
+ "n_meeting_train_constraints": 10,
+ "chosen": {
+  "smooth": 1.0,
+  "prominence": 1.5,
+  "min_sep": 3.0,
+  "floor_frac": 0.35,
+  "edge_trim": 1,
+  "gap": [
+   0.6,
+   1.5,
+   0.8,
+   1.25
+  ]
+ },
+ "train": {
+  "adjacent_pairs": 235,
+  "adjacent_agreement": 0.8851063829787233,
+  "relative_pairs": 228,
+  "relative_exact": 0.6622807017543859,
+  "relative_abs_err_median": 0.0,
+  "relative_abs_err_p95": 2.0,
+  "stored_share_of_neural": 0.06435029250132955,
+  "human_count_exact": 0.7075471698113207
+ },
+ "heldout": {
+  "adjacent_pairs": 528,
+  "adjacent_agreement": 0.7026515151515151,
+  "relative_pairs": 522,
+  "relative_exact": 0.3314176245210728,
+  "relative_abs_err_median": 1.0,
+  "relative_abs_err_p95": 5.0,
+  "stored_share_of_neural": 0.050756344543067884,
+  "human_count_exact": 0.7682926829268293,
+  "passes_bar": false
+ },
+ "top10_train": [
+  {
+   "params": {
+    "smooth": 1.0,
+    "prominence": 1.5,
+    "min_sep": 3.0,
+    "floor_frac": 0.35,
+    "edge_trim": 2,
+    "gap": [
+     0.7,
+     1.35,
+     0.85,
+     1.15
+    ]
+   },
+   "adjacent_pairs": 2,
+   "adjacent_agreement": 0.0,
+   "relative_pairs": 2,
+   "relative_exact": 1.0,
+   "relative_abs_err_median": 0.0,
+   "relative_abs_err_p95": 0.0,
+   "stored_share_of_neural": 0.0010636411983690835,
+   "human_count_exact": 0.7075471698113207
+  },
+  {
+   "params": {
+    "smooth": 1.0,
+    "prominence": 1.5,
+    "min_sep": 3.0,
+    "floor_frac": 0.5,
+    "edge_trim": 2,
+    "gap": [
+     0.7,
+     1.35,
+     0.85,
+     1.15
+    ]
+   },
+   "adjacent_pairs": 1,
+   "adjacent_agreement": 0.0,
+   "relative_pairs": 1,
+   "relative_exact": 1.0,
+   "relative_abs_err_median": 0.0,
+   "relative_abs_err_p95": 0.0,
+   "stored_share_of_neural": 0.0005318205991845417,
+   "human_count_exact": 0.7075471698113207
+  },
+  {
+   "params": {
+    "smooth": 1.0,
+    "prominence": 1.5,
+    "min_sep": 6.0,
+    "floor_frac": 0.35,
+    "edge_trim": 2,
+    "gap": [
+     0.7,
+     1.35,
+     0.85,
+     1.15
+    ]
+   },
+   "adjacent_pairs": 6,
+   "adjacent_agreement": 0.6666666666666666,
+   "relative_pairs": 5,
+   "relative_exact": 1.0,
+   "relative_abs_err_median": 0.0,
+   "relative_abs_err_p95": 0.0,
+   "stored_share_of_neural": 0.001950008863676653,
+   "human_count_exact": 0.7075471698113207
+  },
+  {
+   "params": {
+    "smooth": 1.0,
+    "prominence": 1.5,
+    "min_sep": 6.0,
+    "floor_frac": 0.5,
+    "edge_trim": 2,
+    "gap": [
+     0.7,
+     1.35,
+     0.85,
+     1.15
+    ]
+   },
+   "adjacent_pairs": 5,
+   "adjacent_agreement": 0.8,
+   "relative_pairs": 4,
+   "relative_exact": 1.0,
+   "relative_abs_err_median": 0.0,
+   "relative_abs_err_p95": 0.0,
+   "stored_share_of_neural": 0.0014181882644921113,
+   "human_count_exact": 0.7075471698113207
+  },
+  {
+   "params": {
+    "smooth": 2.0,
+    "prominence": 1.0,
+    "min_sep": 3.0,
+    "floor_frac": 0.35,
+    "edge_trim": 2,
+    "gap": [
+     0.7,
+     1.35,
+     0.85,
+     1.15
+    ]
+   },
+   "adjacent_pairs": 6,
+   "adjacent_agreement": 1.0,
+   "relative_pairs": 2,
+   "relative_exact": 1.0,
+   "relative_abs_err_median": 0.0,
+   "relative_abs_err_p95": 0.0,
+   "stored_share_of_neural": 0.0014181882644921113,
+   "human_count_exact": 0.7358490566037735
+  },
+  {
+   "params": {
+    "smooth": 2.0,
+    "prominence": 1.0,
+    "min_sep": 3.0,
+    "floor_frac": 0.5,
+    "edge_trim": 2,
+    "gap": [
+     0.7,
+     1.35,
+     0.85,
+     1.15
+    ]
+   },
+   "adjacent_pairs": 9,
+   "adjacent_agreement": 1.0,
+   "relative_pairs": 3,
+   "relative_exact": 1.0,
+   "relative_abs_err_median": 0.0,
+   "relative_abs_err_p95": 0.0,
+   "stored_share_of_neural": 0.002127282396738167,
+   "human_count_exact": 0.7358490566037735
+  },
+  {
+   "params": {
+    "smooth": 2.0,
+    "prominence": 1.0,
+    "min_sep": 6.0,
+    "floor_frac": 0.35,
+    "edge_trim": 2,
+    "gap": [
+     0.7,
+     1.35,
+     0.85,
+     1.15
+    ]
+   },
+   "adjacent_pairs": 6,
+   "adjacent_agreement": 1.0,
+   "relative_pairs": 2,
+   "relative_exact": 1.0,
+   "relative_abs_err_median": 0.0,
+   "relative_abs_err_p95": 0.0,
+   "stored_share_of_neural": 0.0014181882644921113,
+   "human_count_exact": 0.7358490566037735
+  },
+  {
+   "params": {
+    "smooth": 2.0,
+    "prominence": 1.0,
+    "min_sep": 6.0,
+    "floor_frac": 0.5,
+    "edge_trim": 2,
+    "gap": [
+     0.7,
+     1.35,
+     0.85,
+     1.15
+    ]
+   },
+   "adjacent_pairs": 9,
+   "adjacent_agreement": 1.0,
+   "relative_pairs": 3,
+   "relative_exact": 1.0,
+   "relative_abs_err_median": 0.0,
+   "relative_abs_err_p95": 0.0,
+   "stored_share_of_neural": 0.002127282396738167,
+   "human_count_exact": 0.7358490566037735
+  },
+  {
+   "params": {
+    "smooth": 2.0,
+    "prominence": 1.0,
+    "min_sep": 3.0,
+    "floor_frac": 0.5,
+    "edge_trim": 1,
+    "gap": [
+     0.7,
+     1.35,
+     0.85,
+     1.15
+    ]
+   },
+   "adjacent_pairs": 51,
+   "adjacent_agreement": 0.8823529411764706,
+   "relative_pairs": 26,
+   "relative_exact": 0.7692307692307693,
+   "relative_abs_err_median": 0.0,
+   "relative_abs_err_p95": 1.0,
+   "stored_share_of_neural": 0.013650062045736572,
+   "human_count_exact": 0.7358490566037735
+  },
+  {
+   "params": {
+    "smooth": 2.0,
+    "prominence": 1.0,
+    "min_sep": 6.0,
+    "floor_frac": 0.5,
+    "edge_trim": 1,
+    "gap": [
+     0.7,
+     1.35,
+     0.85,
+     1.15
+    ]
+   },
+   "adjacent_pairs": 51,
+   "adjacent_agreement": 0.8823529411764706,
+   "relative_pairs": 26,
+   "relative_exact": 0.7692307692307693,
+   "relative_abs_err_median": 0.0,
+   "relative_abs_err_p95": 1.0,
+   "stored_share_of_neural": 0.013650062045736572,
+   "human_count_exact": 0.7358490566037735
+  }
+ ]
+}
