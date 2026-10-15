@@ -154,7 +154,8 @@ def test_outer_shell_follows_the_scroll_outside(built):
     r = np.hypot(p[:, 1] - cy, p[:, 2] - cx)
     th = np.mod(np.arctan2(p[:, 1] - cy, p[:, 2] - cx), 2 * np.pi)
     r_last = syn.sheet_radii(th, R0, PITCH, NS, TOUCH)[-1]
-    assert np.median(np.abs(r - (r_last + _prm().shell_margin))) < 1.0
+    # the masked CT's edge (half a pitch beyond the last sheet), to within the one-voxel ray step
+    assert np.median(np.abs(r - (r_last + 0.5 * PITCH))) < 1.5
     # columns sit at the centres of villa's 720 theta bins (review: on the edges, float rounding emptied 14 %)
     col = np.mod(np.arctan2(zyx[0, :, 1] - cy, zyx[0, :, 2] - cx), 2 * np.pi) / (2 * np.pi) * 720
     assert np.allclose(col - np.floor(col), 0.5, atol=1e-3)
@@ -276,10 +277,13 @@ def test_short_rays_are_never_written_and_rejected_on_check(tmp_path):
     prm = ci.RayParams(min_crossings=0, edge_trim=2)
     assert all(len(p) >= 2 for p in ci.pieces(np.array([1.0, 11, 21]), np.array([True, True]), prm))
     o, s = np.zeros(3, np.float32), np.array([0, 0, 1], np.float32)
-    store = str(tmp_path / "s")
-    ci.write_store(store, [(o, s, np.array([5.0, 15.0], np.float32)), (o, s, np.array([7.0], np.float32))])
+    rays = [(o, s, np.array([5.0, 15.0], np.float32)), (o, s, np.array([7.0], np.float32))]
+    with pytest.raises(ValueError, match="fewer than 2"):            # refused before anything is written
+        ci.write_store(str(tmp_path / "s"), rays)
+    assert not os.path.exists(tmp_path / "s")
+    ci.write_store(str(tmp_path / "u"), rays, validate=False)        # a store made elsewhere is refused on check
     with pytest.raises(ValueError, match="fewer than 2"):
-        ci.check_store(store)
+        ci.check_store(str(tmp_path / "u"))
 
 
 def test_long_runs_are_stored_as_bounded_windows(built):
@@ -413,23 +417,27 @@ def _read_store(store):
 
 
 def test_cli_reads_the_dataset_spec_and_refuses_conflicts(built, tmp_path):
-    # review: ct-inputs ignored the dataset's spiral-scroll.json (umbilicus coordinate_scale, path overrides)
+    # review: ct-inputs ignored the dataset's spiral-scroll.json (umbilicus coordinate_scale, path overrides), and
+    # (review 2) then applied the spec's scale to whatever umbilicus file it was given
     from winding_audit.cli import main
     cy, cx = built["centre"]
-    half = str(tmp_path / "umbilicus_half.json")              # an umbilicus stored at half the fit's resolution
-    json.dump({"control_points": [{"x": cx / 2, "y": cy / 2, "z": z / 2} for z in (0, 16)]}, open(half, "w"))
+    half = {"control_points": [{"x": cx / 2, "y": cy / 2, "z": z / 2} for z in (0, 16)]}   # stored at half scale
     spec = {"schema_version": 1, "name": "syn", "voxel_size_um": 8.64, "spiral_outward_sense": "CW",
             "umbilicus": {"coordinate_scale": 2.0}}
     zpath = _zarr_ct(built["ct"], str(tmp_path / "ct.zarr"))
-    common = ["--ct", zpath, "--r-max", "120"] + _cli_common(half)
+    common = ["--ct", zpath, "--r-max", "120"] + _cli_common(built["um"])[2:]
 
     ds = tmp_path / "ds"
     os.makedirs(ds)
     json.dump(spec, open(ds / "spiral-scroll.json", "w"))
+    json.dump(half, open(ds / "umbilicus.json", "w"))
     with pytest.raises(SystemExit):                            # an explicit scale that villa would not apply
         main(["ct-inputs", *common, "--umbilicus-scale", "1", "--out", str(ds)])
-    main(["ct-inputs", *common, "--out", str(ds)])
-    assert json.load(open(ds / "ct_inputs_report.json"))["provenance"]["umbilicus_scale"] == 2.0
+    with pytest.raises(SystemExit):                            # an umbilicus file villa would not read
+        main(["ct-inputs", *common, "--umbilicus", built["um"], "--out", str(ds)])
+    main(["ct-inputs", *common, "--out", str(ds)])            # defaults to villa's file and scale
+    prov = json.load(open(ds / "ct_inputs_report.json"))["provenance"]
+    assert prov["umbilicus_scale"] == 2.0 and os.path.samefile(prov["umbilicus"], ds / "umbilicus.json")
     ok, info = _levels_right(_read_store(str(ds / "winding_inference")), built["centre"])
     assert ok, info
 
@@ -437,10 +445,11 @@ def test_cli_reads_the_dataset_spec_and_refuses_conflicts(built, tmp_path):
     os.makedirs(ds2)
     json.dump(dict(spec, paths={"winding_inference": "published/winding_inference"}),
               open(ds2 / "spiral-scroll.json", "w"))
+    json.dump(half, open(ds2 / "umbilicus.json", "w"))
     with pytest.raises(SystemExit):                            # villa would read the store from elsewhere
         main(["ct-inputs", *common, "--out", str(ds2)])
-    with pytest.raises(SystemExit):                            # a coarser level needs its scale
-        main(["ct-inputs", *common, "--ct-group", "1", "--out", str(tmp_path / "ds3")])
+    with pytest.raises(SystemExit, match="ct-scale"):         # a coarser level needs its scale
+        main(["ct-inputs", *common, "--umbilicus", built["um"], "--ct-group", "1", "--out", str(tmp_path / "ds3")])
 
 
 def test_auto_r_max_comes_from_the_present_chunks(tmp_path):
@@ -454,6 +463,148 @@ def test_auto_r_max_comes_from_the_present_chunks(tmp_path):
     corner = float(np.hypot(*centre))
     outside = R0 + PITCH * NS + 0.5 * PITCH
     assert outside <= rad <= outside + 2 * 32 * np.sqrt(2) and rad < 0.8 * corner
+
+
+def test_short_rays_use_the_slice_spacing(tmp_path):
+    # review 2: on rays of 10 sheets or fewer the ray's own median moved with the fault's gaps, so a fused pair midway
+    # between neighbours 2 voxels closer was stored as one winding on every such ray
+    n = 10
+    shifts = [(4, 1.0, 1.8, 3.3), (5, 1.0, 1.8, -3.3), (3, 1.0, 1.8, 2.0), (6, 1.0, 1.8, -2.0)]
+    ct, centre = syn.ct_spiral((16, 256, 256), R0, PITCH, n, touch=None, ply=None, shifts=shifts)
+    umb = ci.load_umbilicus(syn.write_umbilicus(str(tmp_path / "u.json"), centre, 0, 16))
+    rays, *_ = _run(ct, umb, prm=_prm(r_max=150.0))
+    pts, ray_id, lvl = _all_points(rays)
+    k, _ = syn.true_sheet(pts, centre, R0, PITCH, n, None, shifts)
+    for i in np.unique(ray_id):
+        sel = ray_id == i
+        assert np.array_equal(k[sel] - k[sel][0], lvl[sel] - lvl[sel][0]), k[sel].tolist()
+    # 1D, with the slice's spacing given: the same fault on a 10-sheet ray is cut
+    prm = ci.RayParams(window=30.0)
+    fused = [5, 15, 25, 37, 48.3, 51.7, 63, 75, 85, 95]
+    for seed in range(20):
+        prof, t = _profile(fused, length=110, seed=seed)
+        pos, reg, _ = ci.crossings_on_profile(prof, t, prm, ref=lambda q: np.full(len(q), 10.0))
+        for run in ci.pieces(pos, reg, prm):
+            assert not np.any(np.abs(run - 50.0) < 3.0), (seed, run.round(1).tolist())
+
+
+def test_faint_sector_keeps_its_crossings(tmp_path):
+    # review 2: the pooled floor erased a sector where the sheets are 3-4x fainter than in the rest of the slice
+    n = 10
+    ct, centre = syn.ct_spiral((16, 256, 256), R0, PITCH, n, touch=None, ply=None, sector_amp=(0.5, 3.6, 45.0))
+    umb = ci.load_umbilicus(syn.write_umbilicus(str(tmp_path / "u.json"), centre, 0, 16))
+    rays, *_ = _run(ct, umb, prm=_prm(r_max=150.0))
+    pts, _, _ = _all_points(rays)
+    cy, cx = centre
+    th = np.mod(np.arctan2(pts[:, 1] - cy, pts[:, 2] - cx), 2 * np.pi)
+    faint, bright = ((th >= 0.6) & (th < 3.5)).sum(), ((th >= 3.7) | (th < 0.4)).sum()
+    assert faint > 0.7 * bright * (3.5 - 0.6) / (2 * np.pi - 3.3)
+    ok, info = _levels_right(rays, centre, touch=None, n_sheets=n)
+    assert ok, info
+
+
+@pytest.mark.parametrize("masked", [True, False])
+def test_faint_outer_layers_do_not_claim_the_outside(tmp_path, masked):
+    # review 2: outer layers fainter than the floor counted as 'dark', so a measured shell sat windings inside the
+    # scroll with no warning; a masked CT's edge is the outside, an unmasked CT must show near-air beyond it
+    n = 14
+    ct, centre = syn.ct_spiral((16, 320, 320), R0, PITCH, n, touch=None, ply=None, outer_amp=(9, 25.0),
+                               masked=masked)
+    umb = ci.load_umbilicus(syn.write_umbilicus(str(tmp_path / "u.json"), centre, 0, 16))
+    rays, outer, inner, zs, thetas, _ = _run(ct, umb, prm=_prm(r_max=200.0, shell_clear=32.0))
+    zyx, meas = ci.shell_grid(outer, inner, zs, thetas, umb)
+    cy, cx = centre
+    p = zyx[meas]
+    if masked:
+        assert meas.mean() > 0.9
+    if len(p):
+        r = np.hypot(p[:, 1] - cy, p[:, 2] - cx)
+        th = np.mod(np.arctan2(p[:, 1] - cy, p[:, 2] - cx), 2 * np.pi)
+        r_last = syn.sheet_radii(th, R0, PITCH, n)[-1]
+        assert np.mean(r < r_last - 5) < 0.05             # a measured shell is never well inside the scroll
+
+
+class _LazyVolume:
+    """A large chunked volume that makes its chunks on demand and counts the reads."""
+
+    def __init__(self, shape, chunk=128):
+        self.shape, self.chunks, self.dtype = shape, (chunk,) * 3, np.uint8
+        self.reads, self.keys = 0, set()
+
+    def __getitem__(self, sl):
+        self.reads += 1
+        self.keys.add(tuple(s.start // self.chunks[0] for s in sl))
+        return np.full(tuple(s.stop - s.start for s in sl), 60, np.uint8)
+
+
+def test_chunks_are_read_about_once_at_real_radii(tmp_path):
+    # review 2: at a real scroll's radius a wedge outgrew the chunk cache and every chunk was read once per slice
+    vol = _LazyVolume((128, 8192, 8192))
+    um = syn.write_umbilicus(str(tmp_path / "u.json"), (4096.0, 4096.0), 0, 128)
+    ci.generate(vol, ci.load_umbilicus(um), 4, 36, z_step=8, n_angles=180,
+                prm=ci.RayParams(r_min=8.0, r_max=3500.0))
+    assert vol.reads <= 1.1 * len(vol.keys)
+
+
+def test_row_boundaries_are_not_read_twice(tmp_path):
+    # review 2: a slice on a chunk-row boundary reached into the previous row with its z tube
+    ct, centre = syn.ct_spiral((64, 224, 224), R0, PITCH, NS)
+    cache = syn.write_chunk_cache(ct, str(tmp_path / "c"), chunk=16)
+    arr = ChunkCacheArray(cache, ct.shape, chunk=16)
+    umb = ci.load_umbilicus(syn.write_umbilicus(str(tmp_path / "u.json"), centre, 0, 64))
+    *_, zs, _, stats = ci.generate(arr, umb, 0, 64, z_step=8, n_angles=90, prm=_prm())
+    assert np.all((zs % 16 >= 1) & (zs % 16 <= 14))         # every tube stays inside one chunk row
+    assert stats["chunk_reads"] <= 1.05 * len(arr._present)  # about once (wedge borders may be read twice)
+
+
+def test_profile_buffer_split_gives_the_same_store(built):
+    # review 2: the per-row profile buffer grew with the slices per row; it is now split under a byte budget
+    a, *_ = _run(built["ct"], built["umb"])
+    b, *_ = _run(built["ct"], built["umb"], prof_budget_bytes=1)
+    for x, y in zip(a.arrays(), b.arrays()):
+        assert np.array_equal(x, y)
+
+
+def test_coarse_origins_sit_on_the_slices_read(built):
+    ct = built["ct"].astype(np.float32).reshape(8, 2, 112, 2, 112, 2)
+    ct2 = np.where(ct.min((1, 3, 5)) == 0, 0, ct.mean((1, 3, 5))).astype(np.uint8)
+    rays, _, _, zs, *_ = _run(ct2, built["umb"], ct_scale=2.0, z0=3, z1=14, z_step=4)
+    assert np.all(zs % 2 == 0)
+    o, *_ = rays.arrays()
+    assert np.all(o[:, 0] % 2 == 0)
+
+
+def test_cli_refuses_bad_windows_before_reading_the_ct(built, tmp_path):
+    # review 2: --window-crossings 1 wrote a store of one-crossing rays, then failed and left it on disk
+    from winding_audit.cli import main
+    out = tmp_path / "ds"
+    for w in (["--window-crossings", "3"], ["--window-crossings", "16", "--window-stride", "20"]):
+        with pytest.raises(SystemExit, match="window"):
+            main(["ct-inputs", "--ct", str(tmp_path / "nowhere.zarr"), *_cli_common(built["um"]), *w,
+                  "--out", str(out)])
+    assert not os.path.exists(out / "winding_inference")
+
+
+def test_coarse_radius_follows_a_drifting_umbilicus(tmp_path):
+    # review 2: the coarse-level radius was measured from the band-middle umbilicus only
+    import zarr
+    from winding_audit import cli
+    ct, centre = syn.ct_spiral((64, 320, 320), R0, PITCH, NS, touch=None, ply=None)
+    g = zarr.open_group(str(tmp_path / "ct.zarr"), mode="w", zarr_format=2)
+    g.create_array("0", shape=ct.shape, chunks=(16, 64, 64), dtype="u1", fill_value=0)[:] = ct
+    c1 = ct.reshape(16, 4, 80, 4, 80, 4).max((1, 3, 5))
+    g.create_array("1", shape=c1.shape, chunks=(16, 40, 40), dtype="u1", fill_value=0)[:] = c1
+    cy, cx = centre
+    drift = {"control_points": [{"x": cx - 30, "y": cy, "z": 0}, {"x": cx + 30, "y": cy, "z": 64}]}
+    json.dump(drift, open(tmp_path / "u.json", "w"))
+    umb = ci.load_umbilicus(str(tmp_path / "u.json"))
+    rad = cli._scroll_radius(g["0"], umb, 0, 64, 1.0, [g["0"], ("1", g["1"])])
+    need = 0.0
+    for z in range(64):
+        u = umb(np.array([z + 0.5]))[0]
+        yy, xx = np.nonzero(ct[z] > 0)
+        need = max(need, float(np.max(np.hypot(yy - u[0], xx - u[1]))))
+    assert rad >= need
 
 
 # ------------------------------------------------------------------------------------- with villa's own code

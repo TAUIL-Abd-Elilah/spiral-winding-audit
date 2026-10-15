@@ -112,58 +112,71 @@ def write_dataset(out_dir, vol, windings, grid_step=2.0, tag="syn"):
     return os.path.join(out_dir, "surface.zarr"), os.path.join(out_dir, "windings")
 
 
-def sheet_radii(theta, r0=12.0, pitch=10.0, n_sheets=8, touch=None, ply=None):
-    """Radius of each sheet at angle ``theta`` (array), (n_sheets, len(theta)), with the faults of ``ct_spiral``."""
+def sheet_radii(theta, r0=12.0, pitch=10.0, n_sheets=8, touch=None, shifts=()):
+    """Radius of each sheet at angle ``theta`` (array), (n_sheets, len(theta)), with the faults of ``ct_spiral``:
+    touch = (k, t0, t1, frac) pushes sheet k frac pitches out over [t0, t1); each (k, t0, t1, dvox) in ``shifts``
+    moves sheet k by dvox voxels over [t0, t1)."""
     theta = np.asarray(theta, np.float64)
     R = r0 + pitch * (np.arange(n_sheets)[:, None] + theta[None, :] / (2 * np.pi))
-    if touch is not None:                       # (k, t0, t1, frac): sheet k pushed frac pitches towards sheet k+1
+    if touch is not None:
         k, t0, t1, frac = touch
         sel = (theta >= t0) & (theta < t1)
         R[k, sel] += frac * pitch
+    for k, t0, t1, dv in shifts:
+        sel = (theta >= t0) & (theta < t1)
+        R[k, sel] += dv
     return R
 
 
 def ct_spiral(shape_zyx=(16, 224, 224), r0=12.0, pitch=10.0, n_sheets=8, sigma=1.3, air=45.0, amp=110.0,
-              noise=5.0, touch=(4, 1.0, 1.6, 0.7), ply=(2, 3.0, 3.6, 2.5), seed=0, centre=None):
-    """A masked raw-CT stand-in: Archimedean spiral sheets as Gaussian ridges (sigma voxels) of ``amp`` above
-    ``air``, with noise, and exactly 0 outside the scroll (half a pitch beyond the last sheet).
+              noise=5.0, touch=(4, 1.0, 1.6, 0.7), ply=(2, 3.0, 3.6, 2.5), seed=0, centre=None, shifts=(),
+              sector_amp=None, outer_amp=None, masked=True):
+    """A raw-CT stand-in: Archimedean spiral sheets as Gaussian ridges (sigma voxels) of ``amp`` above ``air``, with
+    noise; when ``masked``, exactly 0 outside the scroll (half a pitch beyond the last sheet), else air outside too.
 
     touch = (k, t0, t1, frac): over theta in [t0, t1) sheet k sits frac pitches out, so it nearly touches sheet
     k+1 and the two read as one peak. ply = (k, t0, t1, half): over [t0, t1) sheet k is two plies at +-half
-    voxels. Returns (uint8 volume, (cy, cx))."""
+    voxels. shifts: (k, t0, t1, dvox) moves sheet k. sector_amp = (t0, t1, a): every sheet has amplitude a over
+    [t0, t1). outer_amp = (k0, a): sheets k0 and beyond have amplitude a. Returns (uint8 volume, (cy, cx))."""
     Z, Y, X = shape_zyx
     cy, cx = centre or ((Y - 1) / 2, (X - 1) / 2)
     yy, xx = np.mgrid[0:Y, 0:X].astype(np.float64)
     r = np.hypot(xx - cx, yy - cy)
     theta = np.mod(np.arctan2(yy - cy, xx - cx), 2 * np.pi)
-    R = sheet_radii(theta.ravel(), r0, pitch, n_sheets, touch).reshape(n_sheets, Y, X)
+    R = sheet_radii(theta.ravel(), r0, pitch, n_sheets, touch, shifts).reshape(n_sheets, Y, X)
     plane = np.full((Y, X), air)
     for k in range(n_sheets):
         d = r - R[k]
+        a_k = np.full((Y, X), float(amp))
+        if outer_amp is not None and k >= outer_amp[0]:
+            a_k[:] = outer_amp[1]
+        if sector_amp is not None:
+            a_k[(theta >= sector_amp[0]) & (theta < sector_amp[1])] = sector_amp[2]
         if ply is not None and k == ply[0]:
             sel = (theta >= ply[1]) & (theta < ply[2])
             h = ply[3]
-            two = 0.8 * amp * (np.exp(-(d - h) ** 2 / (2 * sigma ** 2)) + np.exp(-(d + h) ** 2 / (2 * sigma ** 2)))
-            one = amp * np.exp(-d ** 2 / (2 * sigma ** 2))
+            two = 0.8 * a_k * (np.exp(-(d - h) ** 2 / (2 * sigma ** 2)) + np.exp(-(d + h) ** 2 / (2 * sigma ** 2)))
+            one = a_k * np.exp(-d ** 2 / (2 * sigma ** 2))
             plane += np.where(sel, two, one)
         else:
-            plane += amp * np.exp(-d ** 2 / (2 * sigma ** 2))
+            plane += a_k * np.exp(-d ** 2 / (2 * sigma ** 2))
     outside = r > R[-1] + 0.5 * pitch
     rng = np.random.default_rng(seed)
     vol = plane[None] + rng.normal(0.0, noise, (Z, Y, X))
     vol = np.clip(vol, 1, 255)
-    vol[:, outside] = 0
+    if masked:
+        vol[:, outside] = 0
     return vol.astype(np.uint8), (cy, cx)
 
 
-def true_sheet(zyx, centre, r0=12.0, pitch=10.0, n_sheets=8, touch=(4, 1.0, 1.6, 0.7)):
+def true_sheet(zyx, centre, r0=12.0, pitch=10.0, n_sheets=8, touch=(4, 1.0, 1.6, 0.7), shifts=()):
     """For points (N, 3) zyx of ``ct_spiral``: index of the nearest sheet and the distance to it (voxels)."""
     cy, cx = centre
     zyx = np.asarray(zyx, np.float64)
     dy, dx = zyx[:, 1] - cy, zyx[:, 2] - cx
     r = np.hypot(dx, dy)
     theta = np.mod(np.arctan2(dy, dx), 2 * np.pi)
-    R = sheet_radii(theta, r0, pitch, n_sheets, touch)
+    R = sheet_radii(theta, r0, pitch, n_sheets, touch, shifts)
     d = np.abs(R - r[None, :])
     k = np.argmin(d, 0)
     return k, d[k, np.arange(len(k))]

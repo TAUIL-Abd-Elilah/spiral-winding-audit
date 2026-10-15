@@ -12,7 +12,7 @@
                         [--first w040] [--last w115] [--subdir ...]
   winding-audit synthetic <out dir> [--merge W T0 T1] [--skip W T0 T1] [--gap W T0 T1]
   winding-audit ct-inputs --ct <raw CT zarr or chunk folder> [--ct-group 0 --ct-scale 1] [--shape Z Y X]
-                          --umbilicus <umbilicus.json> --z0 Z0 --z1 Z1 --out <dataset dir> [--z-step 8]
+                          [--umbilicus <umbilicus.json>] --z0 Z0 --z1 Z1 --out <dataset dir> [--z-step 8]
                           [--angles 720] [--r-min 8] [--r-max R] [--prominence 1.0] [--floor-frac 0.35]
                           [--gap-lo 0.6] [--gap-hi 1.5] [--min-crossings 4] [--edge-trim 1] [--tube 1 1]
   winding-audit check-store <winding_inference dir>
@@ -324,12 +324,24 @@ def _scroll_radius(ct, umb, z0, z1, S, coarse):
             continue
         z_lo, z_hi = int(zc0 // f), int(np.ceil(zc1 / f))
         slab = np.asarray(arr[z_lo:max(z_hi, z_lo + 1)])
-        nz = np.nonzero(slab.max(0) > 0)
-        if len(nz[0]) == 0:
-            return None
-        u = umb(np.array([(z0 + z1) / 2.0], np.float64))[0] / S
-        return float(np.max(np.hypot(nz[0] * f - u[0], nz[1] * f - u[1]))) + 2 * f
+        best = None
+        for i in range(slab.shape[0]):                  # each coarse slice against the umbilicus at that slice
+            nz = np.nonzero(slab[i] > 0)
+            if len(nz[0]) == 0:
+                continue
+            u = umb(np.array([(z_lo + i + 0.5) * f * S], np.float64))[0] / S
+            d = float(np.max(np.hypot(nz[0] * f - u[0], nz[1] * f - u[1])))
+            best = d if best is None else max(best, d)
+        return None if best is None else best + 2 * f
     return None
+
+
+def _villa_path(root, p):
+    from pathlib import Path
+    q = Path(os.path.expandvars(os.path.expanduser(str(p).strip())))
+    if not q.is_absolute():
+        q = Path(root) / q
+    return os.path.normcase(str(q.resolve(strict=False)))
 
 
 def cmd_ct_inputs(a):
@@ -339,19 +351,35 @@ def cmd_ct_inputs(a):
     for d in (store_dir, shell_dir):
         if os.path.exists(d):
             sys.exit(f"{d} exists; remove it or choose another --out")
-    # the dataset's own spec: villa scales the umbilicus by it, and may read the inputs from other paths
+    if a.window_crossings and (a.window_crossings < max(a.min_crossings, 2)
+                               or not 1 <= a.window_stride <= a.window_crossings):
+        sys.exit("--window-crossings must be 0 or at least --min-crossings (and at least 2), with "
+                 "1 <= --window-stride <= --window-crossings")
+    if a.min_crossings < 2:
+        sys.exit("--min-crossings must be at least 2")
+    # the dataset's own spec: villa scales its umbilicus by it, and may read the inputs from other paths
     spec_path = os.path.join(a.out, "spiral-scroll.json")
+    spec = json.load(open(spec_path)) if os.path.exists(spec_path) else {}
+    paths = spec.get("paths") or {}
+    villa_umb = _villa_path(a.out, paths.get("umbilicus")) if paths.get("umbilicus") else \
+        _villa_path(a.out, "umbilicus.json")
+    if a.umbilicus is None:
+        if not os.path.exists(villa_umb):
+            sys.exit(f"give --umbilicus (no {villa_umb})")
+        a.umbilicus = villa_umb
+    elif (spec or os.path.exists(villa_umb)) and _villa_path(".", a.umbilicus) != villa_umb:
+        sys.exit(f"--umbilicus {a.umbilicus} is not the umbilicus villa will read for this dataset ({villa_umb}); "
+                 "the rays must start from the fit's own umbilicus")
     um_scale = a.umbilicus_scale
-    if os.path.exists(spec_path):
-        spec = json.load(open(spec_path))
+    if spec:
         spec_scale = float((spec.get("umbilicus") or {}).get("coordinate_scale", 1.0))
         if um_scale is not None and abs(um_scale - spec_scale) > 1e-9:
             sys.exit(f"--umbilicus-scale {um_scale} disagrees with {spec_path} (umbilicus.coordinate_scale "
                      f"{spec_scale}), which villa applies")
         um_scale = spec_scale
         for key, want in (("winding_inference", store_dir), ("outer_shell", shell_dir)):
-            p = (spec.get("paths") or {}).get(key)
-            if p and os.path.abspath(os.path.join(a.out, p)) != os.path.abspath(want):
+            p = paths.get(key)
+            if p and _villa_path(a.out, p) != _villa_path(".", want):
                 sys.exit(f"{spec_path} points villa's {key} at {p}; write there or remove the override")
     um_scale = 1.0 if um_scale is None else um_scale
     if a.ct_group != "0" and a.ct_scale is None:
@@ -391,8 +419,6 @@ def cmd_ct_inputs(a):
                        edge_trim=a.edge_trim, min_crossings=a.min_crossings, shell_clear=a.shell_clear,
                        shell_margin=a.shell_margin, window_crossings=a.window_crossings,
                        window_stride=a.window_stride)
-    if prm.min_crossings < 2:
-        sys.exit("--min-crossings must be at least 2")
     t0 = time.time()
 
     def progress(i, n, el):
@@ -415,8 +441,9 @@ def cmd_ct_inputs(a):
     est = ci.outer_winding_estimate(outer, stats["median_spacing"])
     warnings = []
     if meta["measured_share"] is not None and meta["measured_share"] < 0.9:
-        warnings.append(f"the scroll's outside was seen on {meta['measured_share']:.0%} of the shell; elsewhere the "
-                        "shell is filled in (fine as villa's pair filter; not for the outer-shell loss)")
+        warnings.append(f"the scroll's outside was seen on {meta['measured_share']:.0%} of the shell; elsewhere it is "
+                        "filled in and may lie inside the scroll: fine as villa's pair filter, but villa also drops "
+                        "tracks outside the shell when a tracks store is used, and it is not fit for the shell loss")
     if stats["slices_without_floor"]:
         warnings.append(f"{stats['slices_without_floor']} slices had too little CT inside the scroll for a floor")
     report = dict(provenance=prov, stats=stats, store=summary, shell_rows=int(zyx.shape[0]),
@@ -502,9 +529,12 @@ def main(argv=None):
                                                "<z>_<y>_<x>.bin 128^3 chunks (then --shape)")
     c.add_argument("--ct-group", default="0", help="OME-Zarr level to read (default 0, the fit's grid)")
     c.add_argument("--ct-scale", type=float, default=None,
-                   help="fit voxels per CT voxel, required for a --ct-group other than 0 (2 for level 1)")
+                   help="fit voxels per CT voxel, required for a --ct-group other than 0 (2 for level 1); CT voxel c "
+                        "is taken at fit position c x scale, villa's convention for coarse volumes")
     c.add_argument("--shape", type=int, nargs=3)
-    c.add_argument("--umbilicus", required=True, help="umbilicus.json with control_points (villa's format)")
+    c.add_argument("--umbilicus", default=None,
+                   help="umbilicus.json with control_points (villa's format); default: the one villa reads for "
+                        "the dataset in --out (paths.umbilicus in its spiral-scroll.json, else umbilicus.json)")
     c.add_argument("--umbilicus-scale", type=float, default=None,
                    help="villa's umbilicus.coordinate_scale (default: from <out>/spiral-scroll.json, else 1)")
     c.add_argument("--z0", type=int, required=True); c.add_argument("--z1", type=int, required=True)

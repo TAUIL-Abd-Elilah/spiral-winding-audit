@@ -18,17 +18,20 @@ raw CT and the umbilicus, for any scroll:
   90th percentiles inside the scroll (the rule calibrated on the PHerc. 343 pair that won First Letters).
 * A peak count is not a winding count where sheets touch (two sheets read as one peak) or a sheet splits into plies
   (one sheet reads as two). Such a fault shows as a gap out of line with the local spacing (running median of
-  pitch_window gaps, a full window at the ray's ends too), or as two consecutive gaps whose sum is (a fused pair
-  midway between its neighbours, a wide ply split). The ray is cut there, and wherever the CT is missing or the ray
-  leaves the volume. Each piece, after dropping edge_trim crossings at each end, is stored with levels 0, 1,
-  2, ...; pieces shorter than min_crossings are dropped, longer ones are stored as overlapping windows of
-  window_crossings (villa draws a ray first, then a pair on it, so unbounded rays would weight the crossings of
-  short pieces many times over). The store trades coverage for precision; villa's store has no confidence field,
-  which is why ambiguity is handled by cutting. The brightness floor is pooled over each slice.
-* The outer shell is the scroll's outside where the CT shows it (the outermost crossing, with the CT present and
-  dark beyond it), filled in across the places where it does not, and never inside the outermost stored crossing
-  nearby: with the outer-shell loss off, villa uses the shell only to drop pairs outside it, so a hole in the shell
-  would only throw supervision away. measured.tif says where it was seen.
+  ``pitch_window`` gaps, a full window at the ray's ends too; on a ray with fewer gaps, the slice's spacing at the
+  same radius), or as two consecutive gaps whose sum is out of line (a fused pair midway between its neighbours, a
+  wide ply split). The ray is cut there, and wherever the CT is missing or the ray leaves the volume. Each piece,
+  after dropping ``edge_trim`` crossings at each end, is stored with levels 0, 1, 2, ...; pieces shorter than
+  ``min_crossings`` are dropped, longer ones are stored as overlapping windows of ``window_crossings`` (villa draws
+  a ray first, then a pair on it; windows bound how much more a crossing of a short piece weighs). The store trades
+  coverage for precision; villa's store has no confidence field, which is why ambiguity is handled by cutting. The
+  brightness floor is pooled over each slice and relaxed per ray only down to halfway from the ray's air level.
+* The outer shell is the scroll's outside where the CT shows it: the mask edge of a masked CT (where its exact
+  zeros begin), else the outermost crossing with the CT near air beyond it. It is filled in where the outside is not
+  seen, and never lies inside the outermost stored crossing nearby: with the outer-shell loss off, villa uses the
+  shell to drop winding pairs outside it, so a hole would only throw supervision away. villa also drops tracks
+  outside the shell when a tracks store is used, so ``measured.tif`` marks where the outside was seen and the report
+  gives the share.
 * The CT may be a coarser pyramid level (ct_scale fit voxels per CT voxel); everything written is in the fit's
   frame.
 
@@ -177,7 +180,7 @@ class RayParams:
     smooth: float = 1.0          # Gaussian smoothing along the ray
     window: float = 40.0         # standardisation window (about 2.5 sheet spacings at 8-9 um)
     prominence: float = 1.0      # local standard deviations
-    floor_frac: float = 0.35     # brighter than air + floor_frac * (papyrus - air), percentiles pooled per slice
+    floor_frac: float = 0.35     # brighter than air + floor_frac * (papyrus - air)
     min_sep: float = 3.0         # minimum distance between crossings
     pitch_window: int = 9        # gaps in the running median that sets the local spacing
     gap_lo: float = 0.6          # one gap below gap_lo x local spacing (a split ply) cuts the ray
@@ -187,10 +190,10 @@ class RayParams:
     edge_trim: int = 1           # crossings dropped at each end of a piece
     min_crossings: int = 4       # shortest piece kept (villa's relative pairs need >= 4 for a 3-crossing span)
     window_crossings: int = 16   # pieces longer than this are stored as overlapping windows of this many crossings
-    window_stride: int = 8       # (villa picks a ray first, then a pair on it: bounded rays keep crossings equal)
-    shell_clear: float = 32.0    # the outermost crossing is the scroll's outside only if the CT is present and
-                                 # stays below the floor for this far beyond it
-    shell_margin: float = 4.0    # the shell lies this far outside the outermost crossing
+    window_stride: int = 8       # (villa draws a ray first, then a pair on it; windows bound the imbalance)
+    shell_clear: float = 32.0    # without a mask edge, the outermost crossing is the scroll's outside only if the CT
+                                 # is present and dark (near air) for this far beyond it
+    shell_margin: float = 4.0    # the shell lies at least this far outside the outermost crossing
 
     def in_ct_voxels(self, ct_scale: float) -> "RayParams":
         """The same parameters for a CT whose voxel is ``ct_scale`` fit voxels (step and tube stay in CT voxels)."""
@@ -209,10 +212,11 @@ def smoothed(prof: np.ndarray, prm: RayParams):
 
 
 def slice_floor(prof: np.ndarray, prm: RayParams):
-    """Brightness floor for the crossings of one slice: air + floor_frac x (papyrus - air), from the 10th and 90th
-    percentiles of the smoothed CT inside the scroll, pooled over all rays of the slice. Pooled, because on a ray
-    that is mostly air inside the mask (flaked outer layers, voids) its own 90th percentile is still air and a
-    per-ray floor falls into the noise. None when the slice has too little CT inside the scroll."""
+    """Brightness floor pooled over all rays of one slice: air + floor_frac x (papyrus - air), from the 10th and 90th
+    percentiles of the smoothed CT inside the scroll. Each ray then uses min(its own floor, this one), but never less
+    than halfway from its own air level to this one (``ray_floor``): on a ray that is mostly air inside the mask
+    (flaked outer layers, voids) its own 90th percentile is still air and its own floor falls into the noise, while
+    a fainter sector of the slice keeps a floor it can pass. None when the slice has too little CT inside."""
     sm, valid, filled = smoothed(prof, prm)
     inside = valid & (filled > 0.5)                      # masked volumes are exactly 0 outside the scroll
     if inside.sum() < 50:
@@ -221,9 +225,16 @@ def slice_floor(prof: np.ndarray, prm: RayParams):
     return float(air + prm.floor_frac * (pap - air))
 
 
+def ray_floor(air_ray: float, own: float, pooled: float | None) -> float:
+    if pooled is None:
+        return own
+    return max(min(own, pooled), air_ray + 0.5 * (pooled - air_ray))
+
+
 def local_spacing(gaps: np.ndarray, k: int) -> np.ndarray:
     """Running median of ``k`` gaps. At the ends the window stays k gaps wide (the first and last k gaps), so an end
-    gap is never measured mostly against itself; a run shorter than k uses its overall median."""
+    gap is never measured mostly against itself; a run shorter than k uses its overall median (``generate`` gives
+    such short rays the slice's spacing at the same radius instead)."""
     n = len(gaps)
     k = max(1, int(k))
     k += (k + 1) % 2
@@ -236,60 +247,116 @@ def local_spacing(gaps: np.ndarray, k: int) -> np.ndarray:
     return loc
 
 
-def crossings_on_profile(prof: np.ndarray, t: np.ndarray, prm: RayParams, floor: float | None = None):
-    """Crossings along one ray profile (NaN = no CT): positions, and for each gap whether it is regular (the two
-    crossings are consecutive sheets as far as the CT can tell). Also the outermost crossing + shell_margin when the
-    CT beyond it is present and dark for shell_clear (the scroll's outside), else NaN. ``floor`` comes from
-    ``slice_floor``; without it the ray's own percentiles are used."""
+@dataclass
+class Detection:
+    pos: np.ndarray              # crossing positions along the ray
+    gap_ok: np.ndarray           # per gap: no missing CT between the two crossings
+    outer: float                 # the scroll's outside along this ray, NaN if not seen
+
+
+_EMPTY = Detection(np.zeros(0), np.zeros(0, bool), np.nan)
+
+
+def detect_crossings(prof: np.ndarray, t: np.ndarray, prm: RayParams, floor: float | None = None) -> Detection:
+    """Crossings along one ray profile (NaN = no CT) and the scroll's outside along it.
+
+    The outside is the mask edge where the CT is masked (exact zeros from the last inside sample to the end of the
+    present CT, at least 4 voxels of them), else the outermost crossing + shell_margin where the CT beyond it is
+    present and near air (below halfway from air to the floor) for shell_clear; never inside the outermost crossing
+    + shell_margin. NaN when neither can be seen (missing CT or the volume's edge comes first)."""
     sm, valid, filled = smoothed(prof, prm)
     if valid.sum() < 10:
-        return np.zeros(0), np.zeros(0, bool), np.nan
-    if floor is None:
-        inside = valid & (filled > 0.5)
-        if inside.sum() < 10:
-            return np.zeros(0), np.zeros(0, bool), np.nan
-        air, pap = np.percentile(sm[inside], [10, 90])
-        floor = air + prm.floor_frac * (pap - air)
+        return _EMPTY
+    inside = valid & (filled > 0.5)
+    if inside.sum() < 10:
+        return _EMPTY
+    air, pap = np.percentile(sm[inside], [10, 90])
+    fl = ray_floor(air, air + prm.floor_frac * (pap - air), floor)
     win = max(5, int(round(prm.window / prm.step)))
     mu = uniform_filter1d(sm, win, mode="nearest")
     sd = np.sqrt(np.maximum(uniform_filter1d((sm - mu) ** 2, win, mode="nearest"), 1e-6))
     zsc = (sm - mu) / sd
     pk = find_peaks(zsc, prominence=prm.prominence, distance=max(1, int(round(prm.min_sep / prm.step))))[0]
-    pk = pk[(sm[pk] >= floor) & valid[pk]]
+    pk = pk[(sm[pk] >= fl) & valid[pk]]
     if len(pk) == 0:
-        return np.zeros(0), np.zeros(0, bool), np.nan
-    # sub-voxel position from a parabola through the peak and its neighbours
+        return _EMPTY
     i = np.clip(pk, 1, len(sm) - 2)
     y0, y1, y2 = sm[i - 1], sm[i], sm[i + 1]
     den = y0 - 2 * y1 + y2
     d = np.where(np.abs(den) > 1e-9, 0.5 * (y0 - y2) / np.where(np.abs(den) > 1e-9, den, 1.0), 0.0)
     pos = t[i] + np.clip(d, -0.5, 0.5) * prm.step
-    # outermost crossing: the scroll's outside if beyond it the CT is present and dark for shell_clear; a ray that
-    # runs into missing CT or out of the volume first leaves the outside unknown there
     last = pk[-1]
     miss = np.nonzero(~valid[last:])[0]
     end = last + (miss[0] if len(miss) else len(valid) - last)
-    below = sm[last:end] < floor
     outer = np.nan
-    if below.any():
-        fb = last + int(np.argmax(below))
-        if (end - fb) * prm.step >= prm.shell_clear and below[fb - last:].all():
-            outer = float(pos[-1]) + prm.shell_margin
+    ins = np.nonzero(inside[last:end])[0]
+    li = last + ins[-1]                                  # last inside sample before missing CT / the volume's edge
+    if (end - li - 1) * prm.step >= 4.0:                 # masked: exact zeros from there on
+        outer = float(t[li]) + prm.step
+    else:                                                # unmasked: the CT must stay near air for shell_clear
+        dark = sm[last:end] < 0.5 * (air + fl)
+        if dark.any():
+            fb = last + int(np.argmax(dark))
+            if (end - fb) * prm.step >= prm.shell_clear and dark[fb - last:].all():
+                outer = float(pos[-1])
+    if np.isfinite(outer):
+        outer = max(outer, float(pos[-1]) + prm.shell_margin)
+    nan_before = np.cumsum(~valid)
+    gap_ok = nan_before[pk[1:]] == nan_before[pk[:-1]]
+    return Detection(pos, gap_ok, outer)
+
+
+def classify_gaps(pos: np.ndarray, gap_ok: np.ndarray, prm: RayParams, ref=None) -> np.ndarray:
+    """Per gap, whether the two crossings are consecutive sheets as far as the CT can tell: the gap and every pair of
+    consecutive gaps in line with the local spacing, and no missing CT between them. ``ref(midpoints)`` gives the
+    slice's spacing at those radii; it replaces the ray's own median on rays of pitch_window gaps or fewer, where a
+    fault makes up a large part of the sample."""
     gaps = np.diff(pos)
     if len(gaps) == 0:
-        return pos, np.zeros(0, bool), outer
-    local = local_spacing(gaps, min(prm.pitch_window, len(gaps)))
+        return np.zeros(0, bool)
+    if len(gaps) <= prm.pitch_window and ref is not None:
+        local = np.asarray(ref(0.5 * (pos[1:] + pos[:-1])), np.float64)
+    else:
+        local = local_spacing(gaps, min(prm.pitch_window, len(gaps)))
     regular = (gaps >= prm.gap_lo * local) & (gaps <= prm.gap_hi * local)
-    # a fault whose displacement is shared by two gaps (a fused pair midway between its neighbours, a ply split
-    # wider than gap_lo allows) leaves each gap within bounds but the pair's sum out of line: cut both
     if len(gaps) >= 2:
         two, lt = gaps[:-1] + gaps[1:], local[:-1] + local[1:]
         bad = (two < prm.pair_lo * lt) | (two > prm.pair_hi * lt)
         regular[:-1] &= ~bad
         regular[1:] &= ~bad
-    nan_before = np.cumsum(~valid)                      # no missing CT between two crossings of a regular gap
-    regular &= nan_before[pk[1:]] == nan_before[pk[:-1]]
-    return pos, regular, outer
+    return regular & gap_ok
+
+
+def crossings_on_profile(prof: np.ndarray, t: np.ndarray, prm: RayParams, floor: float | None = None, ref=None):
+    """``detect_crossings`` + ``classify_gaps``: (positions, regular per gap, outside or NaN)."""
+    det = detect_crossings(prof, t, prm, floor)
+    return det.pos, classify_gaps(det.pos, det.gap_ok, prm, ref), det.outer
+
+
+def spacing_reference(dets, prm: RayParams):
+    """The slice's spacing at a given radius: median of all its rays' gaps whose midpoints lie within
+    +-0.5 x pitch_window x median gap of the query (the slice median where fewer than 5 do). None without gaps."""
+    mids, gaps = [], []
+    for d in dets:
+        if len(d.pos) > 1:
+            g = np.diff(d.pos)
+            mids.append(0.5 * (d.pos[1:] + d.pos[:-1]))
+            gaps.append(g)
+    if not gaps:
+        return None
+    mids, gaps = np.concatenate(mids), np.concatenate(gaps)
+    o = np.argsort(mids)
+    mids, gaps = mids[o], gaps[o]
+    med = float(np.median(gaps))
+    half = 0.5 * prm.pitch_window * med
+
+    def ref(q):
+        q = np.atleast_1d(q)
+        lo = np.searchsorted(mids, q - half)
+        hi = np.searchsorted(mids, q + half, side="right")
+        return np.array([np.median(gaps[a:b]) if b - a >= 5 else med for a, b in zip(lo, hi)])
+
+    return ref
 
 
 def pieces(pos: np.ndarray, regular: np.ndarray, prm: RayParams):
@@ -308,7 +375,9 @@ def pieces(pos: np.ndarray, regular: np.ndarray, prm: RayParams):
 
 
 def windows(run: np.ndarray, size: int, stride: int):
-    """Overlapping windows of at most ``size`` crossings (every ``stride``, the last one ending at the run's end)."""
+    """Overlapping windows of at most ``size`` crossings (every ``stride``, the last one ending at the run's end).
+    villa draws a ray, then a pair on it: windows bound how much more a crossing of a short piece weighs than one of
+    a long piece (about size / min_crossings), they do not make the weights equal."""
     if size <= 0 or len(run) <= size:
         return [run]
     starts = list(range(0, len(run) - size + 1, max(1, stride)))
@@ -319,78 +388,161 @@ def windows(run: np.ndarray, size: int, stride: int):
 
 # --------------------------------------------------------------------------------------------------- generation
 
+class Rays:
+    """Stored rays kept as flat arrays (origin, step, crossing positions, offsets) rather than one Python object per
+    ray. Iterating yields (origin_zyx, step_zyx, crossing_t) per ray."""
+
+    def __init__(self):
+        self._o, self._s, self._t, self._n = [], [], [], []
+        self._final = None
+
+    def add(self, origins, steps, ts):
+        if not len(ts):
+            return
+        self._o.append(np.asarray(origins, np.float32).reshape(-1, 3))
+        self._s.append(np.asarray(steps, np.float32).reshape(-1, 3))
+        self._n.append(np.array([len(t) for t in ts], np.int64))
+        self._t.append(np.concatenate(ts).astype(np.float32))
+        self._final = None
+
+    def arrays(self):
+        if self._final is None:
+            n = np.concatenate(self._n) if self._n else np.zeros(0, np.int64)
+            off = np.zeros(len(n) + 1, np.int64)
+            off[1:] = np.cumsum(n)
+            self._final = (np.concatenate(self._o) if self._o else np.zeros((0, 3), np.float32),
+                           np.concatenate(self._s) if self._s else np.zeros((0, 3), np.float32),
+                           np.concatenate(self._t) if self._t else np.zeros(0, np.float32), off)
+        return self._final
+
+    @classmethod
+    def from_list(cls, rays):
+        r = cls()
+        if len(rays):
+            r.add([x[0] for x in rays], [x[1] for x in rays], [np.asarray(x[2], np.float32) for x in rays])
+        return r
+
+    def __len__(self):
+        return len(self.arrays()[3]) - 1
+
+    def __getitem__(self, i):
+        o, s, t, off = self.arrays()
+        return o[i], s[i], t[off[i]:off[i + 1]]
+
+    def __iter__(self):
+        o, s, t, off = self.arrays()
+        for i in range(len(o)):
+            yield o[i], s[i], t[off[i]:off[i + 1]]
+
+
+def _slice_positions(zs_fit, S, cz, nz, tube_z):
+    """CT slice per requested fit slice: rounded, then nudged so the tube's z layers stay in one chunk row (a tube
+    reaching into the previous row would read that row's chunks a second time). Duplicates are dropped."""
+    z_ct = np.rint(np.asarray(zs_fit, np.float64) / S).astype(np.int64)
+    if nz > cz and tube_z > 0:
+        m = z_ct % cz
+        z_ct = np.where(m < tube_z, z_ct + (tube_z - m), z_ct)
+        m = z_ct % cz
+        z_ct = np.where(m > cz - 1 - tube_z, z_ct - (m - (cz - 1 - tube_z)), z_ct)
+    z_ct = np.clip(z_ct, 0, nz - 1)
+    _, first = np.unique(z_ct, return_index=True)
+    return z_ct[np.sort(first)]
+
+
 def generate(ct, umbilicus, z0: int, z1: int, z_step: int = 8, n_angles: int = 720, prm: RayParams | None = None,
-             ct_scale: float = 1.0, max_points: int = 1_500_000, cache_chunks: int = 160, progress=None):
+             ct_scale: float = 1.0, max_points: int = 1_500_000, cache_chunks: int = 128,
+             prof_budget_bytes: int = 512 << 20, progress=None):
     """Cast the rays for slices z0, z0 + z_step, ... < z1 (fit frame) and return
     (rays, outer, inner_bound, z_samples, thetas, stats).
 
-    ``ct`` may be on a coarser grid than the fit: one CT voxel is ``ct_scale`` fit voxels; ``umbilicus`` and every
-    output are in the fit frame. rays: (origin_zyx, step_zyx, crossing_t) per stored ray; outer: (len(z_samples),
-    n_angles) radius of the scroll's outside (NaN where not seen); inner_bound: the outermost stored crossing +
-    shell_margin per ray (NaN where nothing was stored), a radius the shell must not fall below.
+    ``ct`` may be on a coarser grid than the fit: CT voxel c is fit position c x ``ct_scale`` (villa's convention for
+    coarse volumes); ``umbilicus`` and every output are in the fit frame, and z_samples are the fit z of the CT slices
+    actually read. rays: ``Rays`` (origin_zyx, step_zyx, crossing_t per ray); outer: (len(z_samples), n_angles)
+    radius of the scroll's outside (NaN where not seen); inner_bound: the outermost stored crossing + shell_margin
+    per ray (NaN where nothing was stored), a radius the shell must not fall below.
 
-    Slices are processed one chunk row at a time and, inside a row, wedge by wedge with the chunks kept in an LRU,
-    so each chunk is read about once."""
+    The CT is read one chunk row at a time; within a row every slice of a wedge of rays goes through one sampling
+    call, and decoded chunks stay in an LRU between neighbouring wedges, so each chunk is read about once."""
     prm = prm or RayParams()
     S = float(ct_scale)
     pc = prm.in_ct_voxels(S)
-    zs = np.arange(int(z0), int(z1), int(z_step))
+    shape = tuple(int(v) for v in ct.shape)
+    cz = int((getattr(ct, "chunks", None) or shape)[0])
+    z_ct = _slice_positions(np.arange(int(z0), int(z1), int(z_step)), S, cz, shape[0], int(pc.tube[1]))
+    zs = z_ct * S
     thetas = np.arange(n_angles) * (2 * np.pi / n_angles)
     r = np.arange(pc.r_min, pc.r_max + 1e-9, pc.step)
     tube_n = (2 * pc.tube[0] + 1) * (2 * pc.tube[1] + 1)
-    per_batch = max(1, max_points // max(1, len(r) * tube_n))
-    cz = int((getattr(ct, "chunks", None) or ct.shape)[0])
-    z_ct = zs / S
+    u_fit = umbilicus(zs.astype(np.float64))
+    u_ct = u_fit / S
     rows = {}
     for i, zc in enumerate(z_ct):
-        rows.setdefault(int(np.rint(zc)) // cz, []).append(i)
-    rays, outer = [], np.full((len(zs), n_angles), np.nan)
+        rows.setdefault(int(zc) // cz, []).append(i)
+    rays = Rays()
+    outer = np.full((len(zs), n_angles), np.nan)
     inner = np.full((len(zs), n_angles), np.nan)
     stats = dict(rays_cast=0, crossings=0, crossings_kept=0, pieces=0, stored_rays=0, gaps=0, regular_gaps=0,
                  slices_without_floor=0, chunk_reads=0)
     spacing, lengths, floors = [], [], []
     t0, done = time.time(), 0
     for row in sorted(rows):
-        idx = rows[row]
-        prof = np.full((len(idx), n_angles, len(r)), np.nan, np.float32)
         cache = ChunkLRU(cache_chunks)
-        for s in range(0, n_angles, per_batch):
-            th = thetas[s:s + per_batch]
+        idx_all = rows[row]
+        per_block = max(1, int(prof_budget_bytes // max(1, n_angles * len(r) * 4)))
+        for b0 in range(0, len(idx_all), per_block):
+            idx = idx_all[b0:b0 + per_block]
+            prof = np.full((len(idx), n_angles, len(r)), np.nan, np.float32)
+            per_batch = max(1, max_points // max(1, len(r) * tube_n * len(idx)))
+            # a wedge must fit in the chunk cache, or neighbouring wedges re-read the chunks they share:
+            # wedge chunks ~ phi * R^2 / 2 + 2 R (R = r_max in chunk widths) <= 3/4 of the cache
+            c_yx = float((getattr(ct, "chunks", None) or shape)[1])
+            R_c = pc.r_max / c_yx
+            room = 0.75 * cache_chunks - 2.0 * R_c
+            if room > 0 and R_c > 1:
+                phi = 2.0 * room / (R_c * R_c)
+                per_batch = min(per_batch, max(1, int(phi / (2 * np.pi / n_angles))))
+            for s in range(0, n_angles, per_batch):
+                th = thetas[s:s + per_batch]
+                k = len(th)
+                vals = sample_rays(ct, np.repeat(z_ct[idx], k), np.repeat(u_ct[idx], k, axis=0),
+                                   np.tile(th, len(idx)), r, pc.tube, cache)
+                prof[:, s:s + k] = vals.reshape(len(idx), k, len(r))
             for j, i in enumerate(idx):
-                u = umbilicus(np.array([zs[i]], np.float64))[0] / S
-                prof[j, s:s + len(th)] = sample_rays(ct, np.full(len(th), z_ct[i]), np.repeat(u[None], len(th), 0),
-                                                     th, r, pc.tube, cache)
+                floor = slice_floor(prof[j], pc)
+                if floor is None:
+                    stats["slices_without_floor"] += 1
+                else:
+                    floors.append(floor)
+                dets = [detect_crossings(prof[j, a], r, pc, floor) for a in range(n_angles)]
+                ref = spacing_reference(dets, pc)
+                origin = np.array([zs[i], u_fit[i, 0], u_fit[i, 1]], np.float32)
+                o_list, s_list, t_list = [], [], []
+                for a, (ang, det) in enumerate(zip(thetas, dets)):
+                    regular = classify_gaps(det.pos, det.gap_ok, pc, ref)
+                    outer[i, a] = det.outer * S
+                    stats["rays_cast"] += 1
+                    stats["crossings"] += len(det.pos)
+                    stats["gaps"] += len(regular)
+                    stats["regular_gaps"] += int(regular.sum())
+                    if len(det.pos) > 1:
+                        spacing.append(float(np.median(np.diff(det.pos))) * S)
+                    step = np.array([0.0, np.sin(ang), np.cos(ang)], np.float32)
+                    for run in pieces(det.pos, regular, pc):
+                        stats["pieces"] += 1
+                        stats["crossings_kept"] += len(run)
+                        lengths.append(len(run))
+                        inner[i, a] = np.fmax(inner[i, a], (run[-1] + pc.shell_margin) * S)
+                        for w in windows(run, prm.window_crossings, prm.window_stride):
+                            o_list.append(origin)
+                            s_list.append(step)
+                            t_list.append(w * S)
+                rays.add(o_list, s_list, t_list)
+                stats["stored_rays"] += len(t_list)
+                done += 1
+                if progress:
+                    progress(done, len(zs), time.time() - t0)
+            del prof
         stats["chunk_reads"] += cache.reads
-        for j, i in enumerate(idx):
-            floor = slice_floor(prof[j], pc)
-            if floor is None:
-                stats["slices_without_floor"] += 1
-            else:
-                floors.append(floor)
-            uyx = umbilicus(np.array([zs[i]], np.float64))[0]
-            origin = np.array([zs[i], uyx[0], uyx[1]], np.float32)
-            for a, ang in enumerate(thetas):
-                pos, regular, out_r = crossings_on_profile(prof[j, a], r, pc, floor)
-                outer[i, a] = out_r * S
-                stats["rays_cast"] += 1
-                stats["crossings"] += len(pos)
-                stats["gaps"] += len(regular)
-                stats["regular_gaps"] += int(regular.sum())
-                if len(pos) > 1:
-                    spacing.append(float(np.median(np.diff(pos))) * S)
-                step = np.array([0.0, np.sin(ang), np.cos(ang)], np.float32)
-                for run in pieces(pos, regular, pc):
-                    stats["pieces"] += 1
-                    stats["crossings_kept"] += len(run)
-                    lengths.append(len(run))
-                    inner[i, a] = np.fmax(inner[i, a], (run[-1] + pc.shell_margin) * S)
-                    for w in windows(run, prm.window_crossings, prm.window_stride):
-                        rays.append((origin, step, (w * S).astype(np.float32)))
-                        stats["stored_rays"] += 1
-            done += 1
-            if progress:
-                progress(done, len(zs), time.time() - t0)
-        del prof
     stats["median_spacing"] = float(np.median(spacing)) if spacing else None
     stats["median_floor"] = float(np.median(floors)) if floors else None
     stats["share_crossings_kept"] = stats["crossings_kept"] / max(1, stats["crossings"])
@@ -435,37 +587,47 @@ def _identity_view(manifest: dict) -> dict:
     return view
 
 
-def write_store(out_dir: str, rays, provenance: dict | None = None, rays_per_shard: int = 250_000) -> dict:
-    """Write ``rays`` [(origin_zyx, step_zyx, crossing_t), ...] as a villa ``winding_inference_crossings`` store
-    (format version 1). Like villa's exporter it writes to ``<out_dir>.partial`` and renames, and refuses to
-    overwrite an existing store. Levels are 0, 1, 2, ... along each ray."""
+def write_store(out_dir: str, rays, provenance: dict | None = None, rays_per_shard: int = 250_000,
+                validate: bool = True) -> dict:
+    """Write ``rays`` (a ``Rays``, or a list of (origin_zyx, step_zyx, crossing_t)) as a villa
+    ``winding_inference_crossings`` store (format version 1). Like villa's exporter it writes to
+    ``<out_dir>.partial`` and renames, and refuses to overwrite an existing store. Levels are 0, 1, 2, ... along each
+    ray. Rays with fewer than 2 crossings are refused before anything is written (villa's exporter never writes one,
+    and its loader can fail on one)."""
     if os.path.exists(out_dir):
         raise FileExistsError(f"{out_dir} exists; refusing to overwrite a store")
+    if not isinstance(rays, Rays):
+        rays = Rays.from_list(rays)
+    o_all, s_all, t_all, off_all = rays.arrays()
+    n_all = np.diff(off_all)
+    if validate and np.any(n_all < 2):
+        raise ValueError(f"{int((n_all < 2).sum())} rays with fewer than 2 crossings; nothing written")
     partial = out_dir + ".partial"
     if os.path.exists(partial):
         shutil.rmtree(partial)
     os.makedirs(partial)
     t0 = time.time()
     shards, total_rays, total_crossings = [], 0, 0
-    for k, s in enumerate(range(0, max(len(rays), 1), rays_per_shard)):
-        part = rays[s:s + rays_per_shard]
+    for k, s0 in enumerate(range(0, max(len(n_all), 1), rays_per_shard)):
+        s1 = min(s0 + rays_per_shard, len(n_all))
         name = f"shard_{k}"
         d = os.path.join(partial, name)
         os.makedirs(d)
-        n = len(part)
-        lengths = np.array([len(p[2]) for p in part], np.int64)
+        n = s1 - s0
+        lengths = n_all[s0:s1]
         offsets = np.zeros(n + 1, np.int64)
         offsets[1:] = np.cumsum(lengths)
+        t = t_all[off_all[s0]:off_all[s1]] if n else np.zeros(0, np.float32)
         arrays = {
-            "ray_origin_zyx": np.array([p[0] for p in part], np.float32).reshape(n, 3),
-            "ray_step_zyx": np.array([p[1] for p in part], np.float32).reshape(n, 3),
+            "ray_origin_zyx": np.ascontiguousarray(o_all[s0:s1], np.float32).reshape(n, 3),
+            "ray_step_zyx": np.ascontiguousarray(s_all[s0:s1], np.float32).reshape(n, 3),
             "seed_winding": np.full(n, -1, np.int16),
-            "crossing_t": (np.concatenate([p[2] for p in part]).astype(np.float32) if n else np.zeros(0, np.float32)),
-            "crossing_level": (np.concatenate([np.arange(len(p[2]), dtype=np.int16) for p in part])
+            "crossing_t": np.ascontiguousarray(t, np.float32),
+            "crossing_level": (np.concatenate([np.arange(m, dtype=np.int16) for m in lengths])
                                if n else np.zeros(0, np.int16)),
             "crossing_offsets": offsets,
         }
-        shards.append({"name": name, "arrays": {a: _save(d, a, arrays[a]) for a in _ARRAYS},
+        shards.append({"name": name, "arrays": {a_: _save(d, a_, arrays[a_]) for a_ in _ARRAYS},
                        "num_source_rays": n, "num_retained_rays": n, "num_crossings": int(offsets[-1])})
         total_rays += n
         total_crossings += int(offsets[-1])
@@ -473,7 +635,7 @@ def write_store(out_dir: str, rays, provenance: dict | None = None, rays_per_sha
         "artifact_type": ARTIFACT_TYPE,
         "format_version": FORMAT_VERSION,
         "coordinate_order": "zyx",
-        "coordinate_space": "scale-0 voxels of the CT volume the rays were cast in (the fit's coordinate space)",
+        "coordinate_space": "scale-0 voxels of the fit's volume (rays cast in the CT, scaled to the fit's frame)",
         "num_rays": total_rays,
         "num_crossings": total_crossings,
         "shards": shards,
@@ -484,6 +646,8 @@ def write_store(out_dir: str, rays, provenance: dict | None = None, rays_per_sha
     manifest["elapsed_seconds"] = time.time() - t0
     with open(os.path.join(partial, "manifest.json"), "w") as f:
         f.write(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    if validate:
+        check_store(partial)
     os.replace(partial, out_dir)
     return manifest
 
@@ -642,10 +806,11 @@ def write_shell(out_dir: str, zyx: np.ndarray, measured: np.ndarray | None = Non
     share = float(measured[ok].mean()) if (measured is not None and ok.any()) else None
     meta = {"format": "tifxyz", "type": "seg", "uuid": uuid, "scale": [1.0 / max(spacing, 1e-6), 1.0],
             "bbox": bbox, "measured_share": share,
-            "source": "spiral-winding-audit ct-inputs: the scroll's outside where the CT shows it, filled in "
-                      "elsewhere and never inside the outermost stored crossing. Made as the pair filter of "
-                      "fit_spiral's winding-model losses; where measured.tif is 0 it is not the scroll's outside, "
-                      "so check it before turning the outer-shell loss on.",
+            "source": "spiral-winding-audit ct-inputs: the scroll's outside where the CT shows it (mask edge, or "
+                      "the outermost crossing with near-air CT beyond), filled in elsewhere and never inside the "
+                      "outermost stored crossing. Made as the pair filter of fit_spiral's winding-model losses. "
+                      "Where measured.tif is 0 it may lie inside the scroll: villa then also drops tracks beyond "
+                      "it when a tracks store is used, and it is not fit for the outer-shell loss.",
             "provenance": json.loads(json.dumps(provenance or {}))}
     with open(os.path.join(out_dir, "meta.json"), "w") as f:
         json.dump(meta, f, indent=2)

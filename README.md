@@ -30,18 +30,22 @@ own formats:
 - Rays run outward from the umbilicus in horizontal slices. Along each ray a crossing is a bright CT layer: a local
   maximum with prominence of at least one local standard deviation, brighter than air + 0.35 × (papyrus − air). This
   is the rule calibrated on the awarded PHerc. 343 pair. The air and papyrus levels are pooled over each slice, so a
-  sector where the outer layers have flaked off does not turn noise into crossings.
+  sector where the outer layers have flaked off does not turn noise into crossings. A fainter sector still keeps its
+  crossings, because each ray may relax the pooled floor halfway towards its own air level.
 - A peak is not a winding where two sheets touch, or where one sheet splits into plies. Both show up as a gap out of
-  line with the local spacing, or as two consecutive gaps whose sum is out of line. The ray is cut there, and
-  wherever the CT is missing. Each piece is stored with levels 0, 1, 2, …, so no stored pair spans an ambiguous
-  count. Long pieces are stored as overlapping windows of 16 crossings, because villa draws a ray first and then a
-  pair on it.
-- The outer shell is the scroll's outside where the CT shows it: the outermost crossing, with the CT present and dark
-  beyond it. Elsewhere it is filled in, and it never lies inside the outermost stored crossing nearby. With the
-  outer-shell loss off, villa uses the shell only to drop pairs outside it, so a hole would only throw supervision
-  away. `measured.tif` marks where the outside was actually seen.
+  line with the local spacing, or as two consecutive gaps whose sum is out of line. On a ray with few crossings the
+  local spacing is the slice's spacing at the same radius, so a fault cannot hide in a short ray's own median. The
+  ray is cut there, and wherever the CT is missing. Each piece is stored with levels 0, 1, 2, …, so no stored pair
+  spans an ambiguous count. Long pieces are stored as overlapping windows of 16 crossings. villa draws a ray first and
+  then a pair on it, so the windows limit how much more a crossing in a short piece weighs.
+- The outer shell is the scroll's outside where the CT shows it: the edge of a masked CT, where its exact zeros begin,
+  or else the outermost crossing with near-air CT beyond it. Elsewhere it is filled in, and it never lies inside the
+  outermost stored crossing nearby. With the outer-shell loss off, villa uses the shell to drop winding pairs outside
+  it, so a hole would only throw supervision away. villa also drops tracks outside the shell when a tracks store is
+  used, so `measured.tif` marks where the outside was actually seen and the report gives that share.
 - The CT can be a coarser pyramid level (`--ct-group 1 --ct-scale 2`); everything is written in the fit's frame. The
-  dataset's own `spiral-scroll.json` is read for the umbilicus scale.
+  dataset's own `spiral-scroll.json` is read for the umbilicus file and its scale, so the rays start from the fit's
+  own umbilicus. The CT is read about once per chunk, and the ray length comes from the scroll's extent.
 
 ```bash
 winding-audit ct-inputs --ct <masked CT zarr, or a folder of 128^3 .bin chunks plus --shape Z Y X> \
@@ -56,7 +60,7 @@ as a pair filter (`loss_weight_shell_outer: 0`), and switches verified patches o
 shell loss weight.
 
 What is checked so far, on a synthetic masked CT with two touching sheets and one split sheet planted
-(`tests/test_ctinputs.py`, 24 tests):
+(`tests/test_ctinputs.py`, 34 tests):
 
 - villa's own loader (`winding_supervision.WindingInferenceStore`) verifies the checksums and the fingerprint. Its
   pair sampler returns the true winding difference on all 8,000 sampled pairs, relative and adjacent.
@@ -64,10 +68,10 @@ What is checked so far, on a synthetic masked CT with two touching sheets and on
   CT complete and with a CT chunk missing beyond the scroll. villa's `validate_spiral_supervision` accepts the store.
 - No stored crossing lies on the touching pair, a ray never keeps both plies of the split sheet, and a missing or
   truncated CT chunk never sits inside a stored ray.
-- A review of the first version found 16 defects. Each now has a regression test: missed sheets at a ray's end,
-  faults shared by two gaps, the per-ray floor in flaked sectors, unbounded rays, holes in the shell, shell columns
-  on villa's bin edges, one-slice bands, truncated chunks, coarser CT levels, the dataset spec, the overrides, chunk
-  re-reads and rays cast to the volume's corners.
+- Two rounds of review found 16 defects in the first version and 12 more in the second. Each now has a regression
+  test. Among them: missed sheets at a ray's end, faults shared by two gaps, faults on short rays, the floor in flaked
+  and in faint sectors, faint outer layers taken for the outside, unbounded rays, holes in the shell, one-slice
+  bands, truncated chunks, coarser CT levels, the dataset spec and umbilicus, and chunk re-reads at real radii.
 
 Not checked yet: real CT. Next come the crossing levels along the team's own PHerc. Paris 4 rays, compared with the
 neural store and with the human relative-winding annotations, then one fit on an eligible scroll with and without the
