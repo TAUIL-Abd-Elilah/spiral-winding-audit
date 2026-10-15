@@ -14,14 +14,18 @@ _BIN = re.compile(r"^\d+_\d+_\d+\.bin$")
 
 class ChunkCacheArray:
     """Read-only, array-like view of a folder of raw chunks. Missing chunks read as 0; ``available`` tells which
-    points fall in chunks that are present."""
+    points fall in chunks that are present. Only full-size files count as present: a truncated file (an
+    interrupted download) is missing, not air."""
 
     def __init__(self, path: str, shape, chunk: int = 128, dtype=np.uint8):
         self.path = path
         self.shape = tuple(int(s) for s in shape)
         self.chunks = (chunk, chunk, chunk)
         self.dtype = np.dtype(dtype)
-        self._present = {tuple(int(v) for v in f[:-4].split("_")) for f in os.listdir(path) if _BIN.match(f)}
+        size = chunk ** 3 * self.dtype.itemsize
+        with os.scandir(path) as it:
+            self._present = {tuple(int(v) for v in e.name[:-4].split("_")) for e in it
+                             if _BIN.match(e.name) and e.stat().st_size == size}
 
     def _chunk(self, key):
         if key not in self._present:

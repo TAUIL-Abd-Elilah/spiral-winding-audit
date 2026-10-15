@@ -3,7 +3,7 @@
 Checks the windings of a spiral fit against each other and against the surface prediction, and says where two
 windings sit on the same sheet, where a wrap was skipped, and where a node is not on a sheet at all.
 
-**Status: 0.5.0 (13 October 2026): audit, repair (with an optional CT-aware mode), single-sheet pieces, a density count, and raw-CT ray counts.** The audit measures, per node, how far
+**Status: 0.6.0.dev0 (15 October 2026): audit, repair (with an optional CT-aware mode), single-sheet pieces, a density count, raw-CT ray counts, and, new and not yet tried on real CT, winding constraints from the CT in the spiral fitter's own input formats ([below](#winding-constraints-from-the-ct-for-the-spiral-fitter-15-october-2026-v06-in-progress)).** The audit measures, per node, how far
 each winding is from the next one's surface and from the predicted sheets. The repair moves a node that is off any
 sheet, or on a neighbouring winding's sheet, onto the sheet between its two neighbours. The pieces mark which parts
 of each winding stay on one sheet and are read only once. Numbers in this README are measurements on real fits and
@@ -15,6 +15,65 @@ checkpoint against the prediction in the fit's own spiral space (copy it into vi
 was proposed to villa as ScrollPrize/villa#2071 and declined: the maintainers' view is that the current spiral should
 not have this failure mode. The fits measured here were made with `fit_spiral` at `0fb38c45`, the commit of the
 PHerc. 343 recipe.
+
+## Winding constraints from the CT for the spiral fitter (15 October 2026, v0.6, in progress)
+
+villa's `fit_spiral` has a dense winding-spacing loss that is on by default (`dense_spacing_mode: "winding_model"`).
+It needs two inputs in the dataset: a `winding_inference/` store of sheet crossings along rays, and an `outer_shell/`
+surface. Both are published for PHerc. Paris 4 only; every other scroll in `spiral_datasets` has tracks only.
+Producing the store the official way needs the neural winding model, an earlier spiral fit to seed its rays, and
+several GPUs.
+
+`winding-audit ct-inputs` builds both from the masked raw CT and the scroll's `umbilicus.json`, on a CPU, in villa's
+own formats:
+
+- Rays run outward from the umbilicus in horizontal slices. Along each ray a crossing is a bright CT layer: a local
+  maximum with prominence of at least one local standard deviation, brighter than air + 0.35 × (papyrus − air). This
+  is the rule calibrated on the awarded PHerc. 343 pair. The air and papyrus levels are pooled over each slice, so a
+  sector where the outer layers have flaked off does not turn noise into crossings.
+- A peak is not a winding where two sheets touch, or where one sheet splits into plies. Both show up as a gap out of
+  line with the local spacing, or as two consecutive gaps whose sum is out of line. The ray is cut there, and
+  wherever the CT is missing. Each piece is stored with levels 0, 1, 2, …, so no stored pair spans an ambiguous
+  count. Long pieces are stored as overlapping windows of 16 crossings, because villa draws a ray first and then a
+  pair on it.
+- The outer shell is the scroll's outside where the CT shows it: the outermost crossing, with the CT present and dark
+  beyond it. Elsewhere it is filled in, and it never lies inside the outermost stored crossing nearby. With the
+  outer-shell loss off, villa uses the shell only to drop pairs outside it, so a hole would only throw supervision
+  away. `measured.tif` marks where the outside was actually seen.
+- The CT can be a coarser pyramid level (`--ct-group 1 --ct-scale 2`); everything is written in the fit's frame. The
+  dataset's own `spiral-scroll.json` is read for the umbilicus scale.
+
+```bash
+winding-audit ct-inputs --ct <masked CT zarr, or a folder of 128^3 .bin chunks plus --shape Z Y X> \
+    --umbilicus dataset/umbilicus.json --z0 9000 --z1 10000 --out dataset
+# writes dataset/winding_inference/, dataset/outer_shell/, ct_inputs_report.json and fit_overrides.json
+winding-audit check-store dataset/winding_inference
+```
+
+`fit_overrides.json` is for `FIT_SPIRAL_CONFIG_OVERRIDES`. It turns the winding-model losses on, uses the shell only
+as a pair filter (`loss_weight_shell_outer: 0`), and switches verified patches off when the dataset has none. Set
+`shell_outer_winding_idx` for the scroll in any case: it bounds the dense and regularisation losses whatever the
+shell loss weight.
+
+What is checked so far, on a synthetic masked CT with two touching sheets and one split sheet planted
+(`tests/test_ctinputs.py`, 24 tests):
+
+- villa's own loader (`winding_supervision.WindingInferenceStore`) verifies the checksums and the fingerprint. Its
+  pair sampler returns the true winding difference on all 8,000 sampled pairs, relative and adjacent.
+- villa's `ShellPolarMap`, built over the fitter's own z range, keeps over 99.5 % of the stored crossings, with the
+  CT complete and with a CT chunk missing beyond the scroll. villa's `validate_spiral_supervision` accepts the store.
+- No stored crossing lies on the touching pair, a ray never keeps both plies of the split sheet, and a missing or
+  truncated CT chunk never sits inside a stored ray.
+- A review of the first version found 16 defects. Each now has a regression test: missed sheets at a ray's end,
+  faults shared by two gaps, the per-ray floor in flaked sectors, unbounded rays, holes in the shell, shell columns
+  on villa's bin edges, one-slice bands, truncated chunks, coarser CT levels, the dataset spec, the overrides, chunk
+  re-reads and rays cast to the volume's corners.
+
+Not checked yet: real CT. Next come the crossing levels along the team's own PHerc. Paris 4 rays, compared with the
+neural store and with the human relative-winding annotations, then one fit on an eligible scroll with and without the
+store. A radial ray that crosses a fold meets one sheet more than once; that is caught only where the gaps turn
+irregular. To run the villa round trips, set `VILLA_SPIRAL_DIR` to a villa checkout's `spiral-fitting` folder before
+`pytest`.
 
 ## Why
 

@@ -11,6 +11,11 @@
   winding-audit density <windings dir> --surface <prediction zarr> [--group 0] --z Z [--z Z2 ..]
                         [--first w040] [--last w115] [--subdir ...]
   winding-audit synthetic <out dir> [--merge W T0 T1] [--skip W T0 T1] [--gap W T0 T1]
+  winding-audit ct-inputs --ct <raw CT zarr or chunk folder> [--ct-group 0 --ct-scale 1] [--shape Z Y X]
+                          --umbilicus <umbilicus.json> --z0 Z0 --z1 Z1 --out <dataset dir> [--z-step 8]
+                          [--angles 720] [--r-min 8] [--r-max R] [--prominence 1.0] [--floor-frac 0.35]
+                          [--gap-lo 0.6] [--gap-hi 1.5] [--min-crossings 4] [--edge-trim 1] [--tube 1 1]
+  winding-audit check-store <winding_inference dir>
 """
 from __future__ import annotations
 
@@ -294,6 +299,146 @@ def cmd_synthetic(a):
     print("wrote", s, "and", d)
 
 
+def _scroll_radius(ct, umb, z0, z1, S, coarse):
+    """Largest distance (CT voxels) from the umbilicus to the scroll in the band, from data that costs little to
+    read: the present chunks of a chunk cache, or a coarse level of an OME-Zarr. None when neither is available."""
+    zc0, zc1 = z0 / S, z1 / S
+    if hasattr(ct, "_present"):
+        c = ct.chunks[0]
+        ks = np.array([k for k in ct._present if zc0 // c <= k[0] <= (zc1 - 1) // c])
+        if len(ks) == 0:
+            return None
+        u = umb(np.array([z0, z1 - 1], np.float64)) / S
+        best = 0.0
+        for dy in (0, c):
+            for dx in (0, c):
+                y, x = ks[:, 1] * c + dy, ks[:, 2] * c + dx
+                best = max(best, float(np.max(np.hypot(y[:, None] - u[None, :, 0], x[:, None] - u[None, :, 1]))))
+        return best
+    if not coarse:
+        return None
+    full = coarse[0]
+    for _key, arr in coarse[1:]:
+        f = full.shape[1] / arr.shape[1]
+        if f < 2 or arr.shape[1] * arr.shape[2] * max(1, int((zc1 - zc0) / f)) > 64_000_000:
+            continue
+        z_lo, z_hi = int(zc0 // f), int(np.ceil(zc1 / f))
+        slab = np.asarray(arr[z_lo:max(z_hi, z_lo + 1)])
+        nz = np.nonzero(slab.max(0) > 0)
+        if len(nz[0]) == 0:
+            return None
+        u = umb(np.array([(z0 + z1) / 2.0], np.float64))[0] / S
+        return float(np.max(np.hypot(nz[0] * f - u[0], nz[1] * f - u[1]))) + 2 * f
+    return None
+
+
+def cmd_ct_inputs(a):
+    from . import ctinputs as ci
+    from .volumes import ChunkCacheArray, is_chunk_cache
+    store_dir, shell_dir = os.path.join(a.out, "winding_inference"), os.path.join(a.out, "outer_shell")
+    for d in (store_dir, shell_dir):
+        if os.path.exists(d):
+            sys.exit(f"{d} exists; remove it or choose another --out")
+    # the dataset's own spec: villa scales the umbilicus by it, and may read the inputs from other paths
+    spec_path = os.path.join(a.out, "spiral-scroll.json")
+    um_scale = a.umbilicus_scale
+    if os.path.exists(spec_path):
+        spec = json.load(open(spec_path))
+        spec_scale = float((spec.get("umbilicus") or {}).get("coordinate_scale", 1.0))
+        if um_scale is not None and abs(um_scale - spec_scale) > 1e-9:
+            sys.exit(f"--umbilicus-scale {um_scale} disagrees with {spec_path} (umbilicus.coordinate_scale "
+                     f"{spec_scale}), which villa applies")
+        um_scale = spec_scale
+        for key, want in (("winding_inference", store_dir), ("outer_shell", shell_dir)):
+            p = (spec.get("paths") or {}).get(key)
+            if p and os.path.abspath(os.path.join(a.out, p)) != os.path.abspath(want):
+                sys.exit(f"{spec_path} points villa's {key} at {p}; write there or remove the override")
+    um_scale = 1.0 if um_scale is None else um_scale
+    if a.ct_group != "0" and a.ct_scale is None:
+        sys.exit("--ct-group other than 0: give --ct-scale (fit voxels per CT voxel, e.g. 2 for level 1 of a scan "
+                 "fitted at level 0) so everything is written in the fit's frame")
+    S = 1.0 if a.ct_scale is None else float(a.ct_scale)
+    coarse = None
+    if is_chunk_cache(a.ct):
+        if not a.shape:
+            sys.exit("--ct is a chunk folder: give the volume's --shape Z Y X")
+        ct = ChunkCacheArray(a.ct, a.shape)
+    else:
+        ct = open_surface(a.ct, a.ct_group)
+        try:
+            import zarr
+            g = zarr.open(a.ct, mode="r")
+            if not hasattr(g, "shape"):
+                keys = sorted((k for k in g.array_keys() if k.isdigit()), key=int)
+                coarse = [ct] + [(k, g[k]) for k in keys if int(k) > int(a.ct_group)]
+        except Exception:
+            coarse = None
+    umb = ci.load_umbilicus(a.umbilicus, um_scale)
+    shape = np.array(ct.shape)
+    uyx = umb(np.array([a.z0, a.z1 - 1], np.float64)) / S
+    corners = np.array([[0, 0], [0, shape[2]], [shape[1], 0], [shape[1], shape[2]]], np.float64)
+    corner = float(np.max(np.hypot(*(corners[None] - uyx[:, None]).transpose(2, 0, 1)))) * S
+    r_max, r_note = a.r_max, "given"
+    if r_max is None:
+        rad = _scroll_radius(ct, umb, a.z0, a.z1, S, coarse)
+        if rad is None:
+            r_max, r_note = corner, "farthest volume corner (no cheap scroll extent)"
+        else:
+            r_max = min(corner, rad * S + a.shell_clear + a.shell_margin + 2 * S)
+            r_note = "scroll extent + shell clearance"
+    prm = ci.RayParams(r_min=a.r_min, r_max=r_max, tube=tuple(a.tube), prominence=a.prominence,
+                       floor_frac=a.floor_frac, window=a.window, gap_lo=a.gap_lo, gap_hi=a.gap_hi,
+                       edge_trim=a.edge_trim, min_crossings=a.min_crossings, shell_clear=a.shell_clear,
+                       shell_margin=a.shell_margin, window_crossings=a.window_crossings,
+                       window_stride=a.window_stride)
+    if prm.min_crossings < 2:
+        sys.exit("--min-crossings must be at least 2")
+    t0 = time.time()
+
+    def progress(i, n, el):
+        print(f"slice {i}/{n}  {el:7.0f} s", flush=True)
+
+    rays, outer, inner, zs, thetas, stats = ci.generate(ct, umb, a.z0, a.z1, a.z_step, a.angles, prm, ct_scale=S,
+                                                        progress=progress)
+    zyx, measured = ci.shell_grid(outer, inner, zs, thetas, umb, a.shell_angles)
+    if not rays:
+        sys.exit("no ray kept a run of regular crossings; nothing written")
+    if not ci.has_valid_quad(zyx):
+        sys.exit("no outer shell could be built (no crossing stored and the outside not seen); nothing written")
+    prov = {"ct": os.path.abspath(a.ct), "ct_group": a.ct_group, "ct_scale": S,
+            "umbilicus": os.path.abspath(a.umbilicus), "umbilicus_scale": um_scale, "z0": a.z0, "z1": a.z1,
+            "z_step": a.z_step, "angles": a.angles, "r_max_source": r_note, "params": ci.params_dict(prm)}
+    manifest = ci.write_store(store_dir, rays, provenance=prov)
+    meta = ci.write_shell(shell_dir, zyx, measured, provenance=prov)
+    summary = ci.check_store(store_dir)
+    ok = zyx[..., 0] >= 0
+    est = ci.outer_winding_estimate(outer, stats["median_spacing"])
+    warnings = []
+    if meta["measured_share"] is not None and meta["measured_share"] < 0.9:
+        warnings.append(f"the scroll's outside was seen on {meta['measured_share']:.0%} of the shell; elsewhere the "
+                        "shell is filled in (fine as villa's pair filter; not for the outer-shell loss)")
+    if stats["slices_without_floor"]:
+        warnings.append(f"{stats['slices_without_floor']} slices had too little CT inside the scroll for a floor")
+    report = dict(provenance=prov, stats=stats, store=summary, shell_rows=int(zyx.shape[0]),
+                  shell_share_valid=float(ok.mean()), shell_measured_share=meta["measured_share"],
+                  outer_winding_estimate=est, warnings=warnings, seconds=time.time() - t0)
+    json.dump(report, open(os.path.join(a.out, "ct_inputs_report.json"), "w"), indent=1)
+    json.dump(ci.fit_overrides(a.z0, a.z1, a.out), open(os.path.join(a.out, "fit_overrides.json"), "w"), indent=1)
+    print(json.dumps({k: report[k] for k in ("stats", "store", "shell_measured_share", "seconds")}, indent=1))
+    for w in warnings:
+        print("warning:", w)
+    guide = f" (rough guide from the CT: about {est} windings to the outside)." if est else "."
+    print(f"wrote {store_dir} ({manifest['num_rays']} rays, {manifest['num_crossings']} crossings) and {shell_dir}. "
+          "fit_overrides.json is for FIT_SPIRAL_CONFIG_OVERRIDES (in a VC3D session z_begin/z_end go in the run "
+          "block). Set shell_outer_winding_idx for this scroll whatever the shell loss weight: it bounds the dense "
+          "and regularisation losses" + guide)
+
+
+def cmd_check_store(a):
+    from . import ctinputs as ci
+    print(json.dumps(ci.check_store(a.store), indent=1))
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="winding-audit", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -352,6 +497,35 @@ def main(argv=None):
     s.add_argument("--skip", nargs=3, action="append", metavar=("W", "T0", "T1"))
     s.add_argument("--gap", nargs=3, action="append", metavar=("W", "T0", "T1"))
     s.set_defaults(func=cmd_synthetic)
+    c = sub.add_parser("ct-inputs", help="winding_inference/ and outer_shell/ for fit_spiral from the raw CT")
+    c.add_argument("--ct", required=True, help="raw masked CT: OME-Zarr (group or array), or a folder of "
+                                               "<z>_<y>_<x>.bin 128^3 chunks (then --shape)")
+    c.add_argument("--ct-group", default="0", help="OME-Zarr level to read (default 0, the fit's grid)")
+    c.add_argument("--ct-scale", type=float, default=None,
+                   help="fit voxels per CT voxel, required for a --ct-group other than 0 (2 for level 1)")
+    c.add_argument("--shape", type=int, nargs=3)
+    c.add_argument("--umbilicus", required=True, help="umbilicus.json with control_points (villa's format)")
+    c.add_argument("--umbilicus-scale", type=float, default=None,
+                   help="villa's umbilicus.coordinate_scale (default: from <out>/spiral-scroll.json, else 1)")
+    c.add_argument("--z0", type=int, required=True); c.add_argument("--z1", type=int, required=True)
+    c.add_argument("--z-step", type=int, default=8); c.add_argument("--angles", type=int, default=720)
+    c.add_argument("--r-min", type=float, default=8.0)
+    c.add_argument("--r-max", type=float, default=None,
+                   help="default: the scroll's extent (present chunks, or a coarse OME-Zarr level) plus clearance")
+    c.add_argument("--tube", type=int, nargs=2, default=[1, 1],
+                   help="tube half-widths across the ray in the slice and in z (voxels)")
+    c.add_argument("--prominence", type=float, default=1.0); c.add_argument("--floor-frac", type=float, default=0.35)
+    c.add_argument("--window", type=float, default=40.0)
+    c.add_argument("--gap-lo", type=float, default=0.6); c.add_argument("--gap-hi", type=float, default=1.5)
+    c.add_argument("--edge-trim", type=int, default=1); c.add_argument("--min-crossings", type=int, default=4)
+    c.add_argument("--window-crossings", type=int, default=16, help="longest stored ray, in crossings")
+    c.add_argument("--window-stride", type=int, default=8)
+    c.add_argument("--shell-clear", type=float, default=32.0); c.add_argument("--shell-margin", type=float, default=4.0)
+    c.add_argument("--shell-angles", type=int, default=720)
+    c.add_argument("--out", required=True, help="dataset folder; winding_inference/ and outer_shell/ go in it")
+    c.set_defaults(func=cmd_ct_inputs)
+    k = sub.add_parser("check-store", help="format check of a winding_inference store (no torch)")
+    k.add_argument("store"); k.set_defaults(func=cmd_check_store)
     a = ap.parse_args(argv)
     if a.cmd == "audit" and not a.no_sheets and not a.surface:
         ap.error("--surface is required unless --no-sheets")
