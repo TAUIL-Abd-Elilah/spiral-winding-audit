@@ -28,8 +28,9 @@ numbers are at the end of this section. The format tools described here work; th
 villa's `fit_spiral` has a dense winding-spacing loss that is on by default (`dense_spacing_mode: "winding_model"`).
 It needs two inputs in the dataset: a `winding_inference/` store of sheet crossings along rays, and an `outer_shell/`
 surface. Both are published for PHerc. Paris 4 only; every other scroll in `spiral_datasets` has tracks only.
-Producing the store the official way needs the neural winding model, an earlier spiral fit to seed its rays, and
-several GPUs.
+Producing the store the official way needs the neural winding model and an earlier spiral fit to seed its rays.
+Others have made stores for a few eligible scrolls: claudepro1515 ran the neural model on PHerc. 0826 and 0211 on free
+GPUs, and Ian Onuska's winding meter writes stores from the CT without a model ([Related work](#related-work)).
 
 `winding-audit ct-inputs` builds both from the masked raw CT and the scroll's `umbilicus.json`, on a CPU, in villa's
 own formats:
@@ -99,16 +100,20 @@ The default rule fails the bar. Tuning over 144 parameter sets helps on the boxe
 others. Between two consecutive neural crossings the CT shows exactly one peak on about 60 % of intervals, none on
 12–24 % and two on 13–26 %. At 9.6 µm a sheet's contrast is weak, about 0.2 standard deviations on average, and a
 peak picker errs both ways. The gap and pair-sum cuts catch most of these errors, but not enough of them. The 17–30 %
-of adjacent targets that disagree would pull a fit the wrong way. This supports the team's neural winding model over
-CT peak counting. The store writer, the checker and the outer-shell builder still work with any better source of
+of adjacent targets that disagree would pull a fit the wrong way. Peak counting is the weak part, as others
+found before: Ian Onuska's winding meter found raw peak counts too high and noisy, and its phase field, which does not
+count peaks, matched the neural store in a held-out Paris 4 fit. The neural crossings are not ground truth either: on
+held-out human chains they are 76.7 % exact on adjacent pairs (Johannes Pfeffer's windingcheck). And better winding
+constraints have not so far given better fits (pscamillo's winding-ruler; windingcheck). The store writer, the checker and the outer-shell builder still work with any better source of
 crossings. A radial ray that crosses a fold meets one sheet more than once, which is a second limit, not tested here.
 
 ## Why
 
 Erwin Nieuwlaar's PHerc. 343 First Letters recipe (villa `fit_spiral` → snap onto the surface prediction → lasagna
-flatten → render → ink) is now run by several groups. Its windings are accepted by eye. Nothing checks that winding
-k and winding k+1 lie on different sheets everywhere, or that a winding does not drift onto its neighbour's sheet. A
-winding on the wrong sheet renders the same papyrus as its neighbour, or the gap between wraps, and the ink models
+flatten → render → ink) is now run by several groups. Its windings are accepted by eye. Earlier checks score
+spiral fits as fitted, or a surface against the prediction ([Related work](#related-work)); none that we found
+measures, node by node after the snap, whether winding k and winding k+1 lie on different sheets everywhere, or
+whether a winding drifts onto its neighbour's sheet. A winding on the wrong sheet renders the same papyrus as its neighbour, or the gap between wraps, and the ink models
 then read nothing new.
 
 On our own PHerc. 0175A fit (120 windings, band z 6900–7900, 853 cm² after flattening), 21 % of the nodes lie within
@@ -249,7 +254,8 @@ so its "off any sheet" figure is expected to be high.
   Every fit advances 17–19 voxels of radius per winding whatever the scroll, while the predicted sheets are 22–29
   voxels apart along the same rays. `fit_spiral` learns its spiral pitch (`dr_per_winding`) from a starting value,
   `model_initial_dr_per_winding` = 16 by default; in the PHerc. 0800 z 6300–7800 checkpoint it ended at 16.8. The
-  pitch stays where it starts, so the starting value matters. It should be the scroll's own sheet spacing measured
+  pitch stays where it starts, so the starting value matters. claudepro1515 showed this first, on PHerc. 0826 (26
+  September: fits started at 16, 24 and 32 voxels export 120, 101 and 74 windings); ShribyrLabs saw it on PHerc. 0139. It should be the scroll's own sheet spacing measured
   in the raw CT, not in the prediction (previous point): on PHerc. 0800 the prediction's spacing overstates it.
 - **The shared sheets start in the fit, and the snap makes them.** Before the snap, the PHerc. 0175A windings do not touch
   (2.4 % of nodes within 0.3 pitch of the next winding), but the inner ones are 8–10 voxels apart against a sheet
@@ -429,10 +435,47 @@ pytest tests
 
 ## Related work
 
-[kit stackcheck](https://github.com/ChaseHendrick/Scrolls) (ChaseHendrick, 14 October 2026) checks a stack of published
-tifxyz segments against the umbilicus by geometry and flags coincident adjacent pairs, odd spacing and missing
-sectors; it does not say which segment left its sheet and does not repair. This tool works on spiral-fit output after
-the snap onto the prediction, measures stacking against the raw CT, and repairs it from the CT.
+Earlier work, by date of first release:
+
+- [Nicodol/spiralcheck](https://github.com/Nicodol/spiralcheck) (26 July 2026) scores whole-scroll spiral fits from
+  their meshes, including the spacing between windings (collapsed and inflated gaps).
+- [pscamillo/winding-ruler](https://github.com/pscamillo/winding-ruler) (July 2026) and
+  [constraint-gauge](https://github.com/pscamillo/constraint-gauge) score winding-constraint generators against the
+  human annotations of PHerc. Paris 4; better generators did not give better fits. winding-ruler also maps the sheet
+  pitch of 36 scrolls.
+- [AlexeyDrobkovStrikesBack/st-winding-adapter](https://github.com/AlexeyDrobkovStrikesBack/st-winding-adapter)
+  (19 August 2026) reads winding constraints from the CT's structure tensor; they hold for about 30 voxels along a
+  sheet.
+- [ianonuska/scroll-interferometry](https://github.com/ianonuska/scroll-interferometry) (29 August 2026), a winding
+  meter that reads the CT as an interferogram and writes `winding_inference` stores; in a held-out PHerc. Paris 4 fit
+  its store matched the neural one.
+- [ShribyrLabs/vesuvius-reports](https://github.com/ShribyrLabs/vesuvius-reports) (22 September 2026): the fitted
+  spacing does not move from its start (report 01), m7 misses sheets that lie across the scan axis (report 03), and
+  sheet merges cut out of a surface map (report 04).
+- [claudepro1515/first-letters-fit-audit](https://github.com/claudepro1515/first-letters-fit-audit) (26 September
+  2026) tests along radial rays of the raw CT whether published fits put their windings on the bright layers (they
+  do no better than chance), shows that the winding spacing follows its starting value, counts doubled windings
+  (gaps under 3 voxels), makes neural winding stores for PHerc. 0826 and 0211, and aligns windings to the nearest CT
+  crest along their normals. On fits whose windings cross sheets, that alignment puts more neighbours on one sheet.
+  The repair here bounds each move by both neighbours instead, and moves a stacked node to the CT layer between them.
+- [EconLearn/vesuvius-first-letters-stage-loss](https://github.com/EconLearn/vesuvius-first-letters-stage-loss)
+  (11–12 October 2026) shows the automatic surface hopping windings across the text of PHerc. 1447, and checks how
+  far a surface sits from the m7 prediction (`tools/qa/sheet_offset.py`), close to this tool's off-sheet count.
+
+Later:
+
+- [kit stackcheck](https://github.com/ChaseHendrick/Scrolls) (ChaseHendrick, 14 October 2026) checks a stack of
+  published tifxyz segments against the umbilicus by geometry and flags coincident adjacent pairs, odd spacing and
+  missing sectors; it does not say which segment left its sheet and does not repair.
+- [jo-tud/spiralfiteval](https://github.com/jo-tud/spiralfiteval) (Johannes Pfeffer, 16 October 2026) scores
+  published fits on slips per wrap against Paris 4's human chains, on duplicated windings by the normal gap to the
+  next winding (it names this repository as the closest earlier method) and on fit windings per labelled wrap. His
+  [windingcheck](https://github.com/jo-tud/windingcheck) scores winding constraints against the same chains.
+- villa PR #1842 notes that the fitting objective does not see duplicated coverage, and PR #2048 that the default
+  winding count exports surplus windings outside the papyrus.
+
+This tool works on spiral-fit output after the snap onto the prediction, measures stacking per node against the
+prediction and the raw CT, and repairs it from the CT.
 
 ## Inputs and limits
 

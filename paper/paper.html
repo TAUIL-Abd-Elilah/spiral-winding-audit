@@ -79,8 +79,11 @@ switches and mergers among its main bottlenecks, and its judging criteria for un
 <p>Since the PHerc. 343 award in October 2026, several groups fit a global spiral to a scroll band with villa's
 <code>fit_spiral</code>, export one surface per winding, snap each node along its normal to the nearest sheet of the
 published m7 surface prediction within &plusmn;15 voxels, flatten with lasagna, render and run ink detection. Each step
-is checked by eye on a few windings. Nothing checks that winding <i>k</i> and winding <i>k</i>+1 lie on different sheets
-everywhere, or how many sheets a fit has per winding. This work measures both, explains the failure, and gives tools that
+is checked by eye on a few windings. Earlier checks score fits as fitted: the spacing between windings [5], whether
+windings sit on the CT's bright layers and how the spacing follows its starting value [6], or how far a surface lies
+from the prediction [7]. None that we found measures, node by node after the snap, whether winding <i>k</i> and winding
+<i>k</i>+1 lie on different sheets everywhere, or how many windings a fit puts on each predicted sheet. This work
+measures both, explains the failure, and gives tools that
 find it before GPU time is spent on rendering and ink.</p>
 
 <p class="note">Terminology: "sheet" here means one turn's papyrus as the surface prediction marks it. Villa's
@@ -196,7 +199,8 @@ the prediction. Right: verdicts inside the letter area of w047 and on the rest o
 <p>Every fit advances 17&ndash;19 voxels of radius per winding, whatever the scroll, while the predicted sheets are
 22&ndash;29 voxels apart along the same rays (the CT's bright layers are closer, Table 3b). <code>fit_spiral</code> learns its spiral pitch from <code>model_initial_dr_per_winding</code>
 (default 16); in the PHerc. 0800 z 6300&ndash;7800 checkpoint it ended at 16.8, and in a refit of PHerc.
-0175A with a raised winding count it read 15.6 after 3,000 iterations. Before the snap the windings do not touch (2.4&nbsp;% of PHerc. 0175A nodes
+0175A with a raised winding count it read 15.6 after 3,000 iterations. This was shown first on PHerc. 0826, where fits
+started at 16, 24 and 32 voxels export 120, 101 and 74 windings [6], and on PHerc. 0139 [8]. Before the snap the windings do not touch (2.4&nbsp;% of PHerc. 0175A nodes
 within 0.3 pitch), but they are 0.6&ndash;0.7 of a sheet pitch apart; the nearest-sheet snap then puts pairs of windings
 on one sheet over part of the turn (21&nbsp;%) and leaves others to switch sheets around it. Raising the outer winding
 index only extends how far the fit reaches at the same pitch (the outer-shell loss is off in these configurations).</p>
@@ -340,6 +344,11 @@ spiral scroll with injected mergers, skips, gaps and fused prediction and checks
 <li>E. Nieuwlaar, PHerc. 343 First Letters (recipe, snap_meshes.py, released windings). github.com/Nieuwlaar/pherc343-first-letters</li>
 <li>Vesuvius Challenge open data: m7 surface predictions and CT volumes. scrollprize.org/data</li>
 <li>Vesuvius Challenge, Progress Prizes and Open Problems. scrollprize.org/prizes</li>
+<li>Nicodol, spiralcheck: held-out evaluation for whole-scroll spiral fits (26 July 2026). github.com/Nicodol/spiralcheck</li>
+<li>claudepro1515, Do the First Letters spiral fits follow the sheets? (26 September 2026). github.com/claudepro1515/first-letters-fit-audit</li>
+<li>EconLearn, First Letters workflow on known text (12 October 2026). github.com/EconLearn/vesuvius-first-letters-stage-loss</li>
+<li>ShribyrLabs, Vesuvius Challenge experiment reports 01, 03, 04 (September 2026). github.com/ShribyrLabs/vesuvius-reports</li>
+<li>J. Pfeffer, spiralfiteval (16 October 2026, after this work). github.com/jo-tud/spiralfiteval</li>
 </ol>
 </body>
 </html>
